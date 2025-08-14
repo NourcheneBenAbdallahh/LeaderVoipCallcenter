@@ -17,6 +17,10 @@ import ClientSearchBar from "./ClientSearchBarComponent";
 import ClientFilters from "./ClientFiltersComponent";
 import ClientPagination from "./ClientPaginationComponent";
 
+//import id client
+import { useLocation } from "react-router-dom";
+import { useMemo } from "react";
+
 const Clients = () => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -32,6 +36,13 @@ const Clients = () => {
 
   const totalAppelsEmis = clients.reduce((sum, client) => sum + client.NB_appel_Emis, 0);
   const totalAppelsRecus = clients.reduce((sum, client) => sum + client.NB_Appel_Recu, 0);
+
+  //clientbuId
+  const location = useLocation();
+const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+const focusId = searchParams.get("focus"); // string ou null
+const [highlightId, setHighlightId] = useState(null);
+
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -119,6 +130,32 @@ const Clients = () => {
       });
   }, []);
 
+  //idimport
+useEffect(() => {
+  if (!focusId || clients.length === 0) return;
+
+  // 1) applique la recherche (si tu veux garder ta barre de recherche comme point d'entrée)
+  setSearchTerm(focusId);
+
+  // 2) reproduis le pipeline (filtre + tri) pour trouver l’index du client
+  const filtered = clients.filter((c) =>
+    Object.values(c).join(" ").toLowerCase().includes(String(focusId).toLowerCase())
+  );
+  const sorted = sortClients(filtered);
+
+  // essaie de trouver le client EXACT par ID (plus précis que la recherche globale)
+  const exactIdx = sorted.findIndex(c => String(c.IDClient) === String(focusId));
+  const idx = exactIdx >= 0 ? exactIdx : 0;
+
+  // 3) calcule la page à afficher
+  const page = Math.floor(idx / clientsPerPage) + 1;
+  setCurrentPage(page);
+
+  // 4) garde l’ID à surligner
+  setHighlightId(Number(focusId));
+}, [focusId, clients]); // eslint-disable-line react-hooks/exhaustive-deps
+
+
   const filteredClients = clients.filter((client) => {
     const matchSearch =
       searchTerm === "" ||
@@ -183,6 +220,7 @@ const Clients = () => {
                     handleSort={handleSort}
                     handleCopy={handleCopy}
                     getBadgeColor={getBadgeColor}
+                      highlightId={highlightId}            //parid
                   />
                 )}
                 <ClientPagination

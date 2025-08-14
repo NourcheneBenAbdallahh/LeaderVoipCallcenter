@@ -7,6 +7,7 @@ import Tables from "views/examples/Tables.js";
 import Clients from "views/clients/client";
 import Agents from "views/agents/agent";
 import JournalAppels from "views/journalAppel/JournalAppels";
+import AgentsReception from "views/agentsreceptions/AgentsReception";
 
 var routes = [
   {
@@ -42,7 +43,15 @@ var routes = [
     icon: "ni ni-single-copy-04 text-blue",
     component: <Agents />,
     layout: "/admin",
-  },  {
+  },
+  {
+    path: "/agentsReception",
+    name: "Agents Reception",
+    icon: "ni ni-single-copy-04 text-blue",
+    component: <AgentsReception />,
+    layout: "/admin",
+  },
+  {
     path: "/JournalAppels",
     name: "Journal Appels",
 icon: "ni ni-mobile-button text-success",

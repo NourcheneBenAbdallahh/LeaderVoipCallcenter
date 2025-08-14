@@ -24,7 +24,31 @@ const JournalAppels = () => {
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
   const toggleDrawer = () => setDrawerOpen((s) => !s);
-
+//statutcolors
+  const getBadgeColor = (statut) => {
+    switch (statut) {
+      case "PROMESSE": return "warning";
+      case "RECEPTION": return "primary";
+      case "RAPPEL": return "danger";
+      case "PLUS 2H":
+      case "PLUS 6H": return "secondary";
+      case "NRP":
+      case "REFUS":
+      case "CLIENT FROID": return "dark";
+      case "RECLAMATION":
+      case "LIGNE SUSPENDU": return "info";
+      case "+75 ANS":
+      case "+65 ANS": return "success";
+      case "TCHATCHE":
+      case "ATTENTE PAYEMENT FACTURE":
+      case "A RAPPELER": return "danger";
+      case "DU 10 AU 20":
+      case "DU 1ER AU 10": return "light";
+      case "JUSTE 1H":
+      case "4H": return "secondary";
+      default: return "secondary";
+    }
+  };
   return (
     <>
       <Header title="Journal des appels" totalClients={total} />
@@ -34,7 +58,9 @@ const JournalAppels = () => {
             <Card className="shadow">
               <AppelsControls
                 onOpenFilters={toggleDrawer}
-                onReset={resetAll}
+  onReset={resetAll}
+  searchValue={filters.q}
+  onSearchChange={(val) => applyFilters({ ...filters, q: val })}
               />
 
               <CardBody>
@@ -51,6 +77,8 @@ const JournalAppels = () => {
                       sortBy={sortBy}
                       sortDir={sortDir}
                       onSort={handleSort}
+                                          getBadgeColor={getBadgeColor}
+
                     />
                <ClientPagination
   currentPage={page}

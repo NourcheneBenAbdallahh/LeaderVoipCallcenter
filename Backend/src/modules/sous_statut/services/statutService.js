@@ -1,0 +1,22 @@
+import { pool } from "../../../config/db.js";
+
+export async function findAllStatut() {
+  try {
+    const [rows] = await pool.query("SELECT * FROM sous_status");
+    return rows;
+  } catch (error) {
+    console.error("Erreur récupération datastatut :", error);
+    throw error;
+  }
+}
+
+
+export async function findAllSousStatut() {
+  try {
+    const [rows] = await pool.query("SELECT Sous_Statut FROM sous_status");
+    return rows;
+  } catch (error) {
+    console.error("Erreur récupération sous_status :", error);
+    throw error;
+  }
+}

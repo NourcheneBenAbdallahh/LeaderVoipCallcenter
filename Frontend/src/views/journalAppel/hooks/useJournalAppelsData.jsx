@@ -140,12 +140,17 @@ export function useJournalAppelsData() {
   const paginatedRows = sorted.slice(indexOfFirst, indexOfLast);
 
   // actions
-  const applyFilters = (next) => {
-    setFilters(next);
-    setPage(1); // reset page quand on filtre
-    localStorage.setItem(FILTERS_KEY, JSON.stringify(next));
+// Dans useJournalAppelsData, modifie applyFilters pour ne pas reset si on est déjà sur la même page
+const applyFilters = (next) => {
+  setFilters(next);
+  // seulement remettre à 1 si les filtres changent vraiment
+  if (JSON.stringify(next) !== JSON.stringify(filters)) {
+    setPage(1);
     localStorage.setItem(PARAMS_KEY, JSON.stringify({ page: 1, sortBy, sortDir }));
-  };
+  }
+  localStorage.setItem(FILTERS_KEY, JSON.stringify(next));
+};
+
 
   const clearOneFilter = (key) => {
     const next = { ...filters };

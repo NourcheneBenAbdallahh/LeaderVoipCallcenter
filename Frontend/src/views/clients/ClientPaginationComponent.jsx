@@ -11,10 +11,12 @@ const ClientPagination = ({
   const indexOfLastClient = currentPage * clientsPerPage;
   const indexOfFirstClient = indexOfLastClient - clientsPerPage;
 
-  const goToPage = (page) => {
-    const validPage = Math.max(1, Math.min(page, totalPages));
+const goToPage = (page) => {
+  const validPage = Math.max(1, Math.min(page, totalPages));
+  if (validPage !== currentPage) {
     setCurrentPage(validPage);
-  };
+  }
+};
 
   return (
     <Row className="mt-4 justify-content-center text-center">

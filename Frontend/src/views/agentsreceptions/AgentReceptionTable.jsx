@@ -1,9 +1,9 @@
-// src/views/agents/AgentTableComponent.jsx
+// src/views/agentsReception/AgentReceptionTable.jsx
 import React from "react";
 import { Table, Button, Badge } from "reactstrap";
 import { FaClipboard } from "react-icons/fa";
 
-const AgentTable = ({ agents, highlightId, rowRef }) => {
+const AgentReceptionTable = ({ agents, highlightId, rowRef }) => {
   const handleCopy = (text) => {
     navigator.clipboard.writeText(text)
       .then(() => alert("Copié dans le presse-papier !"))
@@ -18,11 +18,12 @@ const AgentTable = ({ agents, highlightId, rowRef }) => {
   return (
     <Table className="align-middle table-flush" responsive hover>
       <thead style={{ backgroundColor: "#e0f0ff" }}>
-        <tr className="bg-gray-100">
+        <tr>
           <th>ID</th>
           <th>Nom</th>
           <th>Prénom</th>
           <th>Login</th>
+          <th>Mot de passe</th>
           <th>Email</th>
           <th>État</th>
           <th>Admin</th>
@@ -34,17 +35,18 @@ const AgentTable = ({ agents, highlightId, rowRef }) => {
       </thead>
       <tbody>
         {agents.map((agent) => {
-          const isHighlight = String(agent.IDAgent_Emmission) === String(highlightId);
+          const isHighlight = String(agent.IDAgent_Reception) === String(highlightId);
           return (
             <tr
-              key={agent.IDAgent_Emmission}
+              key={agent.IDAgent_Reception}
               ref={isHighlight ? rowRef : null}
               style={isHighlight ? { backgroundColor: "#fff8d5" } : undefined}
             >
-              <td>{agent.IDAgent_Emmission}</td>
+              <td>{agent.IDAgent_Reception}</td>
               <td>{agent.Nom || "—"}</td>
               <td>{agent.Prenom || "—"}</td>
               <td>{agent.Login || "—"}</td>
+              <td>{agent.Mot_de_passe || "—"}</td>
               <td>{agent.Adresse_email || "—"}</td>
               <td>{getEtatBadge(agent.Etat_Compte)}</td>
               <td>{agent.Administrateur ? "✅" : "❌"}</td>
@@ -64,4 +66,4 @@ const AgentTable = ({ agents, highlightId, rowRef }) => {
   );
 };
 
-export default AgentTable;
+export default AgentReceptionTable;
