@@ -1,20 +1,13 @@
-/*!
-
-=========================================================
+/*!=========================================================
 * Argon Dashboard React - v1.2.4
-=========================================================
-
+==========================================================
 * Product Page: https://www.creative-tim.com/product/argon-dashboard-react
-* Copyright 2024 Creative Tim (https://www.creative-tim.com)
-* Licensed under MIT (https://github.com/creativetimofficial/argon-dashboard-react/blob/master/LICENSE.md)
-
+* Copyright 2024 Creative Tim
+* Licensed under MIT
 * Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
+==========================================================
 */
+
 import React from "react";
 import { useLocation, Route, Routes, Navigate } from "react-router-dom";
 // reactstrap components
@@ -24,7 +17,7 @@ import { Container, Row, Col } from "reactstrap";
 import AuthNavbar from "components/Navbars/AuthNavbar.js";
 import AuthFooter from "components/Footers/AuthFooter.js";
 
-import routes from "routes.js";
+import authRoutes from "authRoutes.js";
 
 const Auth = (props) => {
   const mainContent = React.useRef(null);
@@ -36,6 +29,7 @@ const Auth = (props) => {
       document.body.classList.remove("bg-default");
     };
   }, []);
+
   React.useEffect(() => {
     document.documentElement.scrollTop = 0;
     document.scrollingElement.scrollTop = 0;
@@ -48,9 +42,8 @@ const Auth = (props) => {
         return (
           <Route path={prop.path} element={prop.component} key={key} exact />
         );
-      } else {
-        return null;
       }
+      return null;
     });
   };
 
@@ -88,11 +81,13 @@ const Auth = (props) => {
             </svg>
           </div>
         </div>
+
         {/* Page content */}
         <Container className="mt--8 pb-5">
           <Row className="justify-content-center">
             <Routes>
-              {getRoutes(routes)}
+              {getRoutes(authRoutes)}
+              {/* redirection par défaut vers login */}
               <Route path="*" element={<Navigate to="/auth/login" replace />} />
             </Routes>
           </Row>

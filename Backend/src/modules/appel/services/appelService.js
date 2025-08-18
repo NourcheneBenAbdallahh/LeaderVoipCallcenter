@@ -30,24 +30,28 @@ export async function getFilteredJournalAppels(filters = {}) {
       dureeMax = Number(Duree_Appel);
     }
 
-    let sql = "SELECT * FROM appel WHERE 1=1";
+    let sql = `
+      SELECT *,
+             CASE WHEN Date = (
+               SELECT MAX(Date) 
+               FROM appel a2 
+               WHERE 1=1
+                 ${IDAgent_Reception ? " AND a2.IDAgent_Reception = ?" : ""}
+                 ${IDAgent_Emmission ? " AND a2.IDAgent_Emmission = ?" : ""}
+                 ${IDClient ? " AND a2.IDClient = ?" : ""}
+             ) THEN 1 ELSE 0 END AS isLast
+      FROM appel 
+      WHERE 1=1
+    `;
     const params = [];
 
     if (IDAgent_Reception) { sql += " AND IDAgent_Reception = ?"; params.push(IDAgent_Reception); }
     if (IDAgent_Emmission) { sql += " AND IDAgent_Emmission = ?"; params.push(IDAgent_Emmission); }
     if (IDClient)          { sql += " AND IDClient = ?";          params.push(IDClient); }
 
-    // Date 
-    //{ "dateFrom": "2024-03-01", "dateTo": "2024-03-31" }
-    //{  "Date": "2024-03-19"}
-
-
     if (Date)      { sql += " AND DATE(Date) = ?"; params.push(Date); }
     if (dateFrom)  { sql += " AND Date >= ?";      params.push(dateFrom); }
     if (dateTo)    { sql += " AND Date <= ?";      params.push(dateTo); }
-
-    //Duree
-    //{ "dureeMin": 60, "dureeMax": 60 }
 
     if (dureeMin != null || dureeMax != null) {
       const min = Number(dureeMin ?? 0);
@@ -55,8 +59,6 @@ export async function getFilteredJournalAppels(filters = {}) {
       sql += " AND Duree_Appel BETWEEN ? AND ?";
       params.push(min, max);
     }
-
-    // { "Sous_Statut": "PROMESSE" }
 
     if (Sous_Statut) {
       const list = Array.isArray(Sous_Statut) ? Sous_Statut : `${Sous_Statut}`.split(",");

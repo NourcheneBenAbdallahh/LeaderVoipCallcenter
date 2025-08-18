@@ -1,6 +1,7 @@
 import React from "react";
 import { FaClipboard } from "react-icons/fa";
 import { Table, Button, Badge } from "reactstrap";
+const isChecked = selectedClients.includes(client.IDClient);
 
 const ClientTable = ({
   clients,
@@ -10,12 +11,23 @@ const ClientTable = ({
   handleCopy,
   getBadgeColor,
   onAffecter,
-  highlightId,               // ✅ nouveau: id à surligner
+  highlightId,          
+    selectedClients,
+  onSelectClient,
+  onSelectAllClients    
 }) => (
   <Table className="align-middle table-flush" responsive hover>
     <thead style={{ backgroundColor: "#e0f0ff" }}>
       <tr>
-        {[
+             <th>
+         <input
+  type="checkbox"
+  checked={selectedClients.includes(client.IDClient)}
+  onChange={(e) => onSelectClient(client.IDClient, e.target.checked)}
+/>
+
+        </th>
+         {[
           "IDClient",
           "Nom",
           "Prenom",
@@ -47,10 +59,16 @@ const ClientTable = ({
         return (
           <tr
             key={client.IDClient ?? "—"}
-            id={`client-${client.IDClient}`}            // ✅ ancre pour scrollIntoView si besoin
-            className={`hover:bg-gray-50 ${isHighlight ? "row-highlight" : ""}`} // ✅ surlignage
+            id={`client-${client.IDClient}`}           
+            className={`hover:bg-gray-50 ${isHighlight ? "row-highlight" : ""}`} 
             style={isHighlight ? { background: "rgba(66,153,225,0.12)" } : undefined}
-          >
+          > <td>
+          <input
+            type="checkbox"
+            checked={isChecked}
+            onChange={(e) => onSelectClient(client.IDClient, e.target.checked)}
+          />
+        </td>
             <td className="px-4 py-2">{client.IDClient || "—"}</td>
             <td className="px-4 py-2">{client.Nom || "—"}</td>
             <td className="px-4 py-2">{client.Prenom || "—"}</td>

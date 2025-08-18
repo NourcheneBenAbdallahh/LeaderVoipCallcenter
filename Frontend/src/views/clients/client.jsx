@@ -117,6 +117,20 @@ const [highlightId, setHighlightId] = useState(null);
     }
   };
 
+  //selectionner
+const [selectedClients, setSelectedClients] = useState([]);
+
+  const handleSelectClient = (id, checked) => {
+    setSelectedClients(prev => {
+      if (checked) return [...prev, id];
+      return prev.filter(x => x !== id);
+    });
+  };
+
+  const handleSelectAllClients = (checked) => {
+    if (checked) setSelectedClients(paginatedClients.map(c => c.IDClient));
+    else setSelectedClients([]);
+  };
   useEffect(() => {
     axios
       .get("http://localhost:5000/api/clients")
@@ -221,6 +235,9 @@ useEffect(() => {
                     handleCopy={handleCopy}
                     getBadgeColor={getBadgeColor}
                       highlightId={highlightId}            //parid
+                       selectedClients={selectedClients}     
+                    onSelectClient={handleSelectClient}          
+                    onSelectAllClients={handleSelectAllClients} 
                   />
                 )}
                 <ClientPagination

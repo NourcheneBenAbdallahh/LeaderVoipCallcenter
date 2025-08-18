@@ -37,7 +37,6 @@ const Agents = () => {
       });
   }, []);
 
-  // Filtrage texte
   const filteredAgents = useMemo(() => {
     const s = searchTerm.toLowerCase();
     return agents.filter((agent) =>
@@ -45,7 +44,6 @@ const Agents = () => {
     );
   }, [agents, searchTerm]);
 
-  // Si on a un focus, calculer la page où il se trouve
   useEffect(() => {
     if (!focusId || !filteredAgents.length) return;
     const idx = filteredAgents.findIndex(a => String(a.IDAgent_Emmission) === String(focusId));

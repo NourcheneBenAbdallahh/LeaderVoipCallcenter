@@ -132,6 +132,16 @@ export function useJournalAppelsData() {
 
     return arr;
   }, [filtered, sortBy, sortDir]);
+  //lastdateappel
+const dernierAppel = useMemo(() => {
+  if (!sorted.length) return null;
+  return sorted.reduce((latest, r) => {
+    const time = new Date(r.Date + " " + (r.Heure || "00:00")).getTime();
+    const latestTime = new Date(latest.Date + " " + (latest.Heure || "00:00")).getTime();
+    return time > latestTime ? r : latest;
+  }, sorted[0]);
+}, [sorted]);
+
 
   // ======= PAGINATION locale (slice), comme ta page Agents =======
   const total = sorted.length;
@@ -178,7 +188,7 @@ const applyFilters = (next) => {
     loading,
 
     page, limit, sortBy, sortDir, filters,
-
+dernierAppel,
     setPage, applyFilters, clearOneFilter, resetAll, handleSort,
   };
 }
