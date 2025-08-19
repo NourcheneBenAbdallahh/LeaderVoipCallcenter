@@ -1,5 +1,9 @@
-import { findAllAppels,getFilteredJournalAppels } from "../services/appelService.js";
+import { 
+  findAllAppels,
+  getFilteredJournalAppels,findAppelsAAppeler
+} from "../services/appelService.js";
 
+// Récupération de tous les appels
 export async function getAllAppels(req, res) {
   try {
     const appels = await findAllAppels();
@@ -10,6 +14,7 @@ export async function getAllAppels(req, res) {
   }
 }
 
+// Filtrage du journal des appels
 export async function filterJournalAppels(req, res) {
   try {
     const filters = req.body; // { IDAgent_Reception, IDAgent_Emmission, Sous_Statut, Duree_Appel, Date, IDClient }
@@ -18,5 +23,16 @@ export async function filterJournalAppels(req, res) {
   } catch (err) {
     console.error("Erreur filtrage journal appels :", err);
     res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+
+export async function getAppelsAAppeler(req, res) {
+  try {
+    const appels = await findAppelsAAppeler();
+    res.json(appels);
+  } catch (error) {
+    console.error("Erreur getAppelsAAppeler:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 }

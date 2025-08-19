@@ -54,7 +54,8 @@ const JournalAppels = () => {
       case "DU 1ER AU 10": return "light";
       case "JUSTE 1H":
       case "4H": return "secondary";
-      default: return "secondary";
+      default: return "secondary"
+      case "À appeler": return "primary";
     }
   };
 

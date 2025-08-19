@@ -1,29 +1,34 @@
+// views/appelsAffectation/AffectationControls.jsx
 import React, { useEffect, useRef, useState } from "react";
-import { CardHeader, Button, Input } from "reactstrap";
+import { CardHeader, Button, Input, CustomInput, Label } from "reactstrap";
 
-const AppelsControls = ({ onOpenFilters, onReset, searchValue = "", onSearchChange }) => {
+const AffectationControls = ({
+  onOpenFilters,
+  onReset,
+  searchValue = "",
+  onSearchChange,
+  aAppelerOnly = false,
+  onToggleAAppelerOnly
+}) => {
   const [q, setQ] = useState(searchValue);
 
-  // garder la callback à jour sans la mettre dans les deps du debounce
+  // garder callback sans la mettre en deps
   const cbRef = useRef(onSearchChange);
   useEffect(() => { cbRef.current = onSearchChange; }, [onSearchChange]);
 
-  // resync quand le parent change la valeur (ex: reset)
+  // resync si parent change (ex: reset)
   useEffect(() => { setQ(searchValue || ""); }, [searchValue]);
 
-  // option: éviter d'appeler la recherche au tout premier render
+  // éviter le trigger au 1er render
   const didMountRef = useRef(false);
 
-  // debounce 300ms, dép. SEULEMENT q
+  // debounce 300ms seulement sur q
   useEffect(() => {
     if (!didMountRef.current) { didMountRef.current = true; return; }
-    const t = setTimeout(() => {
-      cbRef.current && cbRef.current(q);
-    }, 300);
+    const t = setTimeout(() => { cbRef.current && cbRef.current(q); }, 300);
     return () => clearTimeout(t);
   }, [q]);
 
-  // bonus: reset local immédiat
   const handleReset = () => {
     setQ("");
     onReset && onReset();
@@ -31,9 +36,9 @@ const AppelsControls = ({ onOpenFilters, onReset, searchValue = "", onSearchChan
 
   return (
     <CardHeader className="d-flex align-items-center justify-content-between">
-      <h3 className="mb-0">Journal des appels</h3>
+      <h3 className="mb-0">Appels à affecter</h3>
 
-      <div className="d-flex gap-2 align-items-center" style={{ gap: 12 }}>
+      <div className="d-flex align-items-center" style={{ gap: 12 }}>
         <div style={{ width: 280 }}>
           <Input
             type="search"
@@ -44,6 +49,8 @@ const AppelsControls = ({ onOpenFilters, onReset, searchValue = "", onSearchChan
           />
         </div>
 
+      
+
         <Button color="primary" onClick={onOpenFilters}>Filtres</Button>
         <Button color="secondary" outline onClick={handleReset}>Réinitialiser</Button>
       </div>
@@ -51,4 +58,4 @@ const AppelsControls = ({ onOpenFilters, onReset, searchValue = "", onSearchChan
   );
 };
 
-export default AppelsControls;
+export default AffectationControls;

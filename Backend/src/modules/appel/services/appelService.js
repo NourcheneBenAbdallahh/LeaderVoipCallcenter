@@ -79,3 +79,20 @@ export async function getFilteredJournalAppels(filters = {}) {
     throw error;
   }
 }
+
+// les appels 'À appeler'
+export async function findAppelsAAppeler() {
+  try {
+    const sql = `
+      SELECT * 
+      FROM appel
+      WHERE Sous_Statut = 'À appeler'
+      ORDER BY Date DESC, Heure DESC
+    `;
+    const [rows] = await pool.query(sql);
+    return rows;
+  } catch (error) {
+    console.error("Erreur récupération appels 'À appeler':", error);
+    throw error;
+  }
+}

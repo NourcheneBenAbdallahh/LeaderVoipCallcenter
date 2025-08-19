@@ -69,11 +69,14 @@ const AppelsTable = ({ data, sortBy, sortDir, onSort, getBadgeColor, dernierAppe
               }}
             >
               <td>
-                <input
-        type="checkbox"
-        checked={selectedClients.length === clients.length && clients.length > 0}
-        onChange={(e) => onSelectAllClients(e.target.checked)}
-      />
+             <td>
+  <input
+    type="checkbox"
+    checked={isSelected}
+    onChange={(e) => onSelectRow(r.IDAppel, e.target.checked)}
+  />
+</td>
+
               </td>
 
               <td>{r.IDAppel}</td>

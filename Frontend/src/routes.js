@@ -8,6 +8,7 @@ import Agents from "views/agents/agent";
 import JournalAppels from "views/journalAppel/JournalAppels";
 import AgentsReception from "views/agentsreceptions/AgentsReception";
 import Login from "views/login/Login";
+import AppelsAffectation from "views/affectationAppel/AppelsAffectation";
 
 var routes = [
   {
@@ -29,6 +30,12 @@ var routes = [
     name: "Tables",
     icon: "ni ni-bullet-list-67 text-red",
     component: <Tables />,
+    layout: "/admin",
+  },  {
+    path: "/aapeler",
+    name: "Journal Appels",
+    icon: "ni ni-bullet-list-67 text-red",
+    component: < AppelsAffectation/>,
     layout: "/admin",
   },
     {
@@ -53,7 +60,7 @@ var routes = [
   },
   {
     path: "/JournalAppels",
-    name: "Journal Appels",
+    name: "Historique Appels",
 icon: "ni ni-mobile-button text-success",
     component: <JournalAppels />,
     layout: "/admin",
