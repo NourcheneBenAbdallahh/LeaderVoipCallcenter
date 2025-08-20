@@ -1,129 +1,108 @@
 import React, { useEffect, useState } from "react";
 import {
   Modal, ModalHeader, ModalBody, ModalFooter,
-  FormGroup, Label, Input, Row, Col, Button
+  FormGroup, Label, Input, Button, Row, Col
 } from "reactstrap";
 
-const defaultLocal = {
-  statut: "",
-  idAgent: "",
-  dateFrom: "",
-  dateTo: "",
-  minDuree: "",
-  maxDuree: ""
+const getAgentId = (a) => a?.id ?? a?.IDAgent_Emmission ?? a?.IDAgent ?? null;
+const getAgentLabel = (a) => {
+  const id = getAgentId(a);
+  const nom = a?.nom ?? a?.Nom ?? "";
+  const prenom = a?.Prenom ?? "";
+  const np = `${nom} ${prenom}`.trim();
+  return id != null ? `${id} — ${np || (a?.Login ?? "Agent")}` : (np || (a?.Login ?? "Agent"));
 };
 
-const AffectationFiltersDrawer = ({ isOpen, toggle, value = {}, onApply, agents = [], statuts = [] }) => {
-  const [local, setLocal] = useState({ ...defaultLocal, ...value });
+const AffectationFiltersDrawer = ({
+  isOpen,
+  toggle,
+  value = {},
+  onApply = () => {},
+  agents = [],
+}) => {
+  const [local, setLocal] = useState({
+    q: "",
+    dateMin: "",
+    dateMax: "",
+    IDAgent: "",
+  });
 
   useEffect(() => {
-    setLocal({ ...defaultLocal, ...value });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+    setLocal({
+      q: value.q ?? "",
+      dateMin: value.dateMin ?? "",
+      dateMax: value.dateMax ?? "",
+      IDAgent: value.IDAgent ?? "",
+    });
+  }, [value, isOpen]);
 
   const handleChange = (k, v) => setLocal(prev => ({ ...prev, [k]: v }));
 
   const handleApply = () => {
-    onApply && onApply({
-      ...value,
-      statut: local.statut || "",
-      idAgent: local.idAgent || "",
-      dateFrom: local.dateFrom || "",
-      dateTo: local.dateTo || "",
-      minDuree: local.minDuree || "",
-      maxDuree: local.maxDuree || "",
-      page: 1 // reset pagination quand on filtre
-    });
+    // on renvoie l'ID tel quel (string). Si tu veux un number: parseInt(...) côté hook.
+    onApply({ ...value, ...local, page: 1 });
     toggle && toggle();
   };
 
-  const handleClear = () => {
-    setLocal(defaultLocal);
+  const handleReset = () => {
+    setLocal({ q: "", dateMin: "", dateMax: "", IDAgent: "" });
   };
+
+  const safeAgents = Array.isArray(agents) ? agents.filter(a => getAgentId(a) != null) : [];
 
   return (
     <Modal isOpen={isOpen} toggle={toggle} size="lg" centered>
-      <ModalHeader toggle={toggle}>Filtres</ModalHeader>
+      <ModalHeader toggle={toggle}>Filtres avancés</ModalHeader>
       <ModalBody>
         <Row>
           <Col md="6">
             <FormGroup>
-              <Label>Statut</Label>
-              <Input
-                type="select"
-                value={local.statut}
-                onChange={(e) => handleChange("statut", e.target.value)}
-              >
-                <option value="">(Tous)</option>
-                {statuts.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </Input>
-            </FormGroup>
-          </Col>
-          <Col md="6">
-            <FormGroup>
-              <Label>Agent</Label>
-              <Input
-                type="select"
-                value={local.idAgent}
-                onChange={(e) => handleChange("idAgent", e.target.value)}
-              >
-                <option value="">(Tous)</option>
-                {agents.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
-              </Input>
-            </FormGroup>
-          </Col>
-        </Row>
-
-        <Row>
-          <Col md="6">
-            <FormGroup>
-              <Label>Du</Label>
+              <Label>Date min</Label>
               <Input
                 type="date"
-                value={local.dateFrom}
-                onChange={(e) => handleChange("dateFrom", e.target.value)}
+                value={local.dateMin}
+                onChange={(e) => handleChange("dateMin", e.target.value)}
               />
             </FormGroup>
           </Col>
           <Col md="6">
             <FormGroup>
-              <Label>Au</Label>
+              <Label>Date max</Label>
               <Input
                 type="date"
-                value={local.dateTo}
-                onChange={(e) => handleChange("dateTo", e.target.value)}
+                value={local.dateMax}
+                onChange={(e) => handleChange("dateMax", e.target.value)}
               />
             </FormGroup>
           </Col>
         </Row>
 
         <Row>
-          <Col md="6">
+          <Col md="12">
             <FormGroup>
-              <Label>Durée min (sec)</Label>
+              <Label>Agent (ID — Nom Prénom)</Label>
               <Input
-                type="number"
-                min="0"
-                value={local.minDuree}
-                onChange={(e) => handleChange("minDuree", e.target.value)}
-              />
-            </FormGroup>
-          </Col>
-          <Col md="6">
-            <FormGroup>
-              <Label>Durée max (sec)</Label>
-              <Input
-                type="number"
-                min="0"
-                value={local.maxDuree}
-                onChange={(e) => handleChange("maxDuree", e.target.value)}
-              />
+                type="select"
+                value={local.IDAgent}
+                onChange={(e) => handleChange("IDAgent", e.target.value)}
+              >
+                <option value="">(Tous)</option>
+                {safeAgents.map((a) => {
+                  const id = getAgentId(a);
+                  return (
+                    <option key={id} value={id}>
+                      {getAgentLabel(a)}
+                    </option>
+                  );
+                })}
+              </Input>
             </FormGroup>
           </Col>
         </Row>
       </ModalBody>
+
       <ModalFooter>
-        <Button color="secondary" onClick={handleClear}>Effacer</Button>
+        <Button color="secondary" onClick={handleReset}>Réinitialiser</Button>
         <Button color="primary" onClick={handleApply}>Appliquer</Button>
       </ModalFooter>
     </Modal>

@@ -21,6 +21,9 @@ import ClientPagination from "./ClientPaginationComponent";
 import { useLocation } from "react-router-dom";
 import { useMemo } from "react";
 
+import AffecterModal from "./Affectation/AffecterModal";
+import { toast } from "react-toastify"; // si tu l'utilises (optionnel)
+
 const Clients = () => {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -189,6 +192,28 @@ useEffect(() => {
   const indexOfFirstClient = indexOfLastClient - clientsPerPage;
   const paginatedClients = sortedClients.slice(indexOfFirstClient, indexOfLastClient);
 
+
+//affectation client
+ const [affModalOpen, setAffModalOpen] = useState(false);
+  const [clientToAffect, setClientToAffect] = useState(null);
+
+  const handleOpenAffecter = (client) => {
+    setClientToAffect(client);
+    setAffModalOpen(true);
+  };
+
+  const handleCloseAffecter = () => {
+    setAffModalOpen(false);
+    setClientToAffect(null);
+  };
+
+  const handleAffectationSuccess = () => {
+    // Option: refetch la liste des clients / appels, ou toast
+    // refetch();
+    // toast.success("Affectation réussie !");
+    console.log("Affectation OK !");
+  };
+
   return (
     <>
       <Header
@@ -238,8 +263,15 @@ useEffect(() => {
                        selectedClients={selectedClients}     
                     onSelectClient={handleSelectClient}          
                     onSelectAllClients={handleSelectAllClients} 
+                    onAffecter={handleOpenAffecter}  
                   />
                 )}
+                 <AffecterModal
+        isOpen={affModalOpen}
+        onClose={handleCloseAffecter}
+        client={clientToAffect}
+        onSuccess={handleAffectationSuccess}
+      />
                 <ClientPagination
                   currentPage={currentPage}
                   totalClients={totalClients}

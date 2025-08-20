@@ -1,67 +1,113 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Container, Row, Col, Card, CardBody, Spinner } from "reactstrap";
 import Header from "components/Headers/Header.js";
-import AppelsTable from "../journalAppel/AppelsTable.jsx";
 import FilterChips from "../journalAppel/FilterChips.jsx";
 import ClientPagination from "../clients/ClientPaginationComponent.jsx";
-import { useAppelsAffectationData } from "./hooks/useAppelsAffectationData.jsx";
+
+import useAppelsAApellerData from "./hooks/useAppelsAApellerData.jsx";
 import AffectationControls from "../affectationAppel/AffectationControls.jsx";
 import AffectationFiltersDrawer from "../affectationAppel/AffectationFiltersDrawer.jsx";
+import axios from "axios";
+import AffectationTable from "./AffectationTable.jsx";
+import EditAppelModal from "../affectationAppel/Editaffectation/EditAppelModal.jsx";
 
 const AppelsAffectation = () => {
   const {
     rows, total, loading,
-    page, limit, sortBy, sortDir, filters,
-    setPage, applyFilters, clearOneFilter, resetAll, handleSort, dernierAppel
-  } = useAppelsAffectationData();
+    page, limit, filters,
+    setPage, applyFilters, resetAll,
+  } = useAppelsAApellerData();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const toggleDrawer = () => setDrawerOpen((s) => !s);
+
   const [selectedRows, setSelectedRows] = useState([]);
-
-
-  // Sélection d’une ligne
-const handleSelectRow = (id, checked) => {
-  setSelectedRows(prev =>
-    checked ? Array.from(new Set([...prev, id])) : prev.filter(x => x !== id)
-  );
-};
-
-// Sélection/Désélection de toutes les lignes visibles
-const handleSelectAll = (checked) => {
-  setSelectedRows(
-    checked ? (rows ?? []).map(r => r.IDAppel) : []
-  );
-};
-
-  // statuts/agents pour le drawer (adapte à tes vraies données)
-  const statuts = [
-    { value: "", label: "(Tous)" },
-    { value: "À appeler", label: "À appeler" },
-    { value: "Rappel", label: "Rappel" },
-    { value: "Réception", label: "Réception" },
-    { value: "Réclamation", label: "Réclamation" },
-  ];
-  const agents = []; // ex: [{id: 5, nom: "Imen OKBI"}, ...]
-
-  const onSearchChange = (val) => {
-    applyFilters((prev) => ({ ...prev, q: val, page: 1 }));
+  const handleSelectRow = (id, checked) => {
+    setSelectedRows(prev =>
+      checked ? Array.from(new Set([...prev, id])) : prev.filter(x => x !== id)
+    );
+  };
+  const handleSelectAll = (checked) => {
+    setSelectedRows(checked ? (rows ?? []).map(r => r.IDAppel) : []);
   };
 
-  const onToggleAAppelerOnly = (checked) => {
-    applyFilters((prev) => ({
-      ...prev,
-      aAppelerOnly: !!checked,
-      statut: checked ? "À appeler" : prev.statut, // option: force statut
-      page: 1
-    }));
-  };
+  // agents
+  const [agents, setAgents] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/agents");
+        const list = (Array.isArray(res.data) ? res.data : []).map(a => ({
+          id: a.IDAgent_Emmission ?? a.IDAgent ?? a.id,
+          nom: `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() || a.Login || `Agent ${a.IDAgent_Emmission ?? a.IDAgent ?? ""}`,
+        })).filter(a => a.id != null);
+        if (alive) setAgents(list);
+      } catch (e) {
+        console.error("Erreur chargement agents:", e);
+        if (alive) setAgents([]);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
+  // clients
+  const [clients, setClients] = useState([]);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await axios.get("http://localhost:5000/api/clients");
+        const list = (Array.isArray(res.data) ? res.data : [])
+          .map(c => ({
+            id: c.IDClient ?? c.id,
+            nom: `${c.Prenom ?? ""} ${c.Nom ?? ""}`.trim() || c.RaisonSociale || `Client ${c.IDClient ?? c.id ?? ""}`,
+          }))
+          .filter(c => c.id != null);
+        if (alive) setClients(list);
+      } catch (e) {
+        console.error("Erreur chargement clients:", e);
+        if (alive) setClients([]);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+
+  // recherche globale
+  const onSearchChange = (val) => applyFilters({ q: val, page: 1 });
+
+  // couleurs badge
   const getBadgeColor = (statut) => (statut === "À appeler" ? "primary" : "secondary");
+
+  const statuts = [{ value: "À appeler", label: "À appeler" }];
+
+  const handleRemoveChip = (key) => applyFilters({ [key]: "", page: 1 });
+
+  const agentNameById = Object.fromEntries((agents || []).map(a => [a.id, a.nom]));
+  const clientNameById = Object.fromEntries((clients || []).map(c => [c.id, c.nom]));
+
+  // --- Modal Edition ---
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState(null);
+
+  const openEdit = (row) => { setEditingRow(row); setEditOpen(true); };
+  const closeEdit = () => { setEditOpen(false); setEditingRow(null); };
+
+  // Vue locale pour patcher après save (si ton hook ne propose pas de setter des rows)
+  const [localRows, setLocalRows] = useState(null);
+  const effectiveRows = localRows ?? rows;
+
+  const handleSavedRow = (updated) => {
+    setLocalRows(prev => {
+      const src = prev ?? rows;
+      return src.map(r => (r.IDAppel === updated.IDAppel ? { ...r, ...updated } : r));
+    });
+    // (optionnel) relancer un refetch côté hook si dispo
+  };
 
   return (
     <>
-      <Header title="Appels à affecter" totalClients={total} />
+      <Header title="Appels à appeler" totalClients={total} />
 
       <Container className="mt-[-3rem]" fluid>
         <Row>
@@ -72,12 +118,10 @@ const handleSelectAll = (checked) => {
                 onReset={resetAll}
                 searchValue={filters?.q ?? ""}
                 onSearchChange={onSearchChange}
-                aAppelerOnly={!!filters?.aAppelerOnly}
-                onToggleAAppelerOnly={onToggleAAppelerOnly}
               />
 
               <CardBody>
-                <FilterChips filters={filters} onRemove={clearOneFilter} />
+                <FilterChips filters={filters || {}} onRemove={handleRemoveChip} />
 
                 {loading ? (
                   <div className="text-center my-4">
@@ -85,16 +129,19 @@ const handleSelectAll = (checked) => {
                   </div>
                 ) : (
                   <>
-                    <AppelsTable
-                      data={rows}
-                      sortBy={sortBy}
-                      sortDir={sortDir}
-                      onSort={handleSort}
+                    <AffectationTable
+                      data={effectiveRows}
+                      sortBy={null}
+                      sortDir={null}
+                      onSort={() => {}}
                       getBadgeColor={getBadgeColor}
-                      dernierAppel={dernierAppel}
+                      dernierAppel={null}
+                      agentNameById={agentNameById}
+                      clientNameById={clientNameById}
                       selectedRows={selectedRows}
                       onSelectRow={handleSelectRow}
                       onSelectAll={handleSelectAll}
+                      onEdit={openEdit}
                     />
                     <ClientPagination
                       currentPage={page}
@@ -113,12 +160,20 @@ const handleSelectAll = (checked) => {
       <AffectationFiltersDrawer
         isOpen={drawerOpen}
         toggle={toggleDrawer}
-        value={filters}
+        value={filters || {}}
         onApply={applyFilters}
-        agents={agents}
-        statuts={statuts}
+        agents={agents || []}
+        statuts={statuts || []}
+      />
+
+      <EditAppelModal
+        isOpen={editOpen}
+        onClose={closeEdit}
+        appel={editingRow}
+        onSaved={handleSavedRow}
       />
     </>
   );
 };
+
 export default AppelsAffectation;

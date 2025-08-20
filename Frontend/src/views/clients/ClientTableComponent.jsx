@@ -2,6 +2,7 @@ import React from "react";
 import { FaClipboard } from "react-icons/fa";
 import { Table, Button, Badge } from "reactstrap";
 
+
 const ClientTable = ({
   clients,
   sortField,

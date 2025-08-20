@@ -18,7 +18,6 @@ const JournalAppels = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const toggleDrawer = () => setDrawerOpen(s => !s);
 
-  // ✅ Hooks pour la sélection des lignes
   const [selectedRows, setSelectedRows] = useState([]);
 
   const handleSelectRow = (id, checked) => {
@@ -55,7 +54,10 @@ const JournalAppels = () => {
       case "JUSTE 1H":
       case "4H": return "secondary";
       default: return "secondary"
-      case "À appeler": return "primary";
+      case "À appeler": return "primary";   
+      case "Traité": return "success";           
+      case "ne repond pas": return "dark";
+
     }
   };
 

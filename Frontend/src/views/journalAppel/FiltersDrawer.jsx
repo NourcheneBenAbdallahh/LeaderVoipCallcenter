@@ -38,7 +38,7 @@ const FiltersDrawer = ({ isOpen, toggle, value, onApply }) => {
     if (isOpen) setLocal(value || EMPTY);
   }, [isOpen]); // <-- pas de "value" ici
 
-  // Chargement dynamique des sous-statuts (première ouverture)
+  //sous-statuts 
   useEffect(() => {
     if (!isOpen) return;
     if (fetchedOnce.current) return;
@@ -48,7 +48,7 @@ const FiltersDrawer = ({ isOpen, toggle, value, onApply }) => {
         setSsLoading(true);
         setSsError("");
 
-        const res = await axios.get("http://localhost:5000/api/sous_statuts/name");
+        const res = await axios.get("http://localhost:5000/api/sous_statuts_sauf_aapellername");
         let list = res.data;
 
         // tolérance sur le format de la réponse
@@ -162,7 +162,6 @@ const FiltersDrawer = ({ isOpen, toggle, value, onApply }) => {
         </Col>
       </Row>
 
-      {/* Durées */}
       <Row className="mb-3">
         <Col md="6">
           <Label>Durée min (sec)</Label>
@@ -182,7 +181,6 @@ const FiltersDrawer = ({ isOpen, toggle, value, onApply }) => {
         </Col>
       </Row>
 
-      {/* Client + Sous-Statut */}
       <Row className="mb-3">
         <Col md="6">
           <Label>ID Client</Label>

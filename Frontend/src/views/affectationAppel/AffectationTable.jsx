@@ -26,7 +26,29 @@ const typeBadge = (t) => {
   return <Badge color="light">{t}</Badge>;
 };
 
-const AppelsTable = ({ data, sortBy, sortDir, onSort, getBadgeColor, dernierAppel, selectedRows, onSelectRow, onSelectAll }) => {
+
+const getInitials = (full) =>
+  (full ?? "")
+    .trim()
+    .split(/\s+/)
+    .map(s => s[0]?.toUpperCase())
+    .slice(0, 2)
+    .join("") || "•";
+
+    
+const AffectationTable = ({
+  data,
+  sortBy,
+  sortDir,
+  onSort,
+  getBadgeColor,
+  dernierAppel,
+  selectedRows,
+  onSelectRow,
+  onSelectAll,
+  clientNameById = {},
+  agentNameById = {}, onEdit,  
+}) => {
 
   const allSelected = data.length > 0 && data.every(r => selectedRows.includes(r.IDAppel));
 
@@ -49,9 +71,9 @@ const AppelsTable = ({ data, sortBy, sortDir, onSort, getBadgeColor, dernierAppe
           <th>Commentaire</th>
           <SortHeader label="Numéro" col="Numero" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
           <SortHeader label="Client" col="IDClient" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-          <SortHeader label="Agent Récep." col="IDAgent_Reception" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
           <SortHeader label="Agent Émiss." col="IDAgent_Emmission" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
           <SortHeader label="Sous Statut" col="Sous_Statut" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
+          <th>Action</th>
         </tr>
       </thead>
 
@@ -68,14 +90,11 @@ const AppelsTable = ({ data, sortBy, sortDir, onSort, getBadgeColor, dernierAppe
               }}
             >
               <td>
-             <td>
-  <input
-    type="checkbox"
-    checked={isSelected}
-    onChange={(e) => onSelectRow(r.IDAppel, e.target.checked)}
-  />
-</td>
-
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={(e) => onSelectRow(r.IDAppel, e.target.checked)}
+                />
               </td>
 
               <td>{r.IDAppel}</td>
@@ -87,10 +106,70 @@ const AppelsTable = ({ data, sortBy, sortDir, onSort, getBadgeColor, dernierAppe
                 <div className="text-truncate">{r.Commentaire || "—"}</div>
               </td>
               <td>{r.Numero || "—"}</td>
-              <td>{r.IDClient ? <Link to={`/admin/clients?focus=${r.IDClient}`}>{r.IDClient}</Link> : "—"}</td>
-              <td>{r.IDAgent_Reception != null ? <Link to={`/admin/agentsReception?focus=${r.IDAgent_Reception}`}>{r.IDAgent_Reception}</Link> : "—"}</td>
-              <td>{r.IDAgent_Emmission ? <Link to={`/admin/agents?focus=${r.IDAgent_Emmission}`}>{r.IDAgent_Emmission}</Link> : "—"}</td>
-              <td><Badge color={getBadgeColor(r.Sous_Statut)}>{r.Sous_Statut || "—"}</Badge></td>
+
+             <td>
+  {r.IDClient ? (
+    <>
+      <Link to={`/admin/clients?focus=${r.IDClient}`} className="d-block text-primary font-weight-bold">
+        {r.IDClient}
+      </Link>
+
+      <div className="d-flex align-items-center mt-1">
+        <span
+          className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
+          style={{ width: 22, height: 22, fontSize: 12 }}
+          title={clientNameById?.[r.IDClient] || ""}
+        >
+          {getInitials(clientNameById?.[r.IDClient])}
+        </span>
+        <small className="text-muted">
+          {clientNameById?.[r.IDClient] ?? <em>—</em>}
+        </small>
+      </div>
+
+   
+    </>
+  ) : "—"}
+</td>
+
+
+            <td>
+  {r.IDAgent_Emmission ? (
+    <>
+      {/* ID en valeur principale */}
+      <Link to={`/admin/agents?focus=${r.IDAgent_Emmission}`} className="d-block text-primary font-weight-bold">
+        {r.IDAgent_Emmission}
+      </Link>
+
+      {/* Variante A: avatar + nom en gris */}
+      <div className="d-flex align-items-center mt-1">
+        <span
+          className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
+          style={{ width: 22, height: 22, fontSize: 12 }}
+          title={agentNameById?.[r.IDAgent_Emmission] || ""}
+        >
+          {getInitials(agentNameById?.[r.IDAgent_Emmission])}
+        </span>
+   <small className="text-muted d-inline-block text-truncate" style={{ maxWidth: 180 }}>
+  {agentNameById?.[r.IDAgent_Emmission] ?? <em>—</em>}
+</small>
+
+      </div>
+
+    
+    </>
+  ) : "—"}
+</td>
+
+              <td>
+                <Badge color={getBadgeColor(r.Sous_Statut)}>{r.Sous_Statut || "—"}</Badge>
+              </td>
+              <td>
+                <Button color="success" size="sm"
+                onClick={() => onEdit && onEdit(r)}  // 👈 ici
+
+                >Modifier</Button>
+              </td>
             </tr>
           );
         })}
@@ -99,5 +178,4 @@ const AppelsTable = ({ data, sortBy, sortDir, onSort, getBadgeColor, dernierAppe
   );
 };
 
-
-export default AppelsTable;
+export default AffectationTable;

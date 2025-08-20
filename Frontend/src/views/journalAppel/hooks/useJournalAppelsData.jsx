@@ -52,7 +52,7 @@ export function useJournalAppelsData() {
       setLoading(true);
 
       // Option A (simple) : tout l’historique
-      const res = await axios.get("http://localhost:5000/api/appels");
+      const res = await axios.get("http://localhost:5000/api/appelsselect");
       const arr = Array.isArray(res.data) ? res.data : (res.data.rows || []);
       setAllRows(arr || []);
     } catch (e) {

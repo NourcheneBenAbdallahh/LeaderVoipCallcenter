@@ -26,12 +26,6 @@ var routes = [
     layout: "/admin",
   },
   {
-    path: "/tables",
-    name: "Tables",
-    icon: "ni ni-bullet-list-67 text-red",
-    component: <Tables />,
-    layout: "/admin",
-  },  {
     path: "/aapeler",
     name: "Journal Appels",
     icon: "ni ni-bullet-list-67 text-red",

@@ -10,10 +10,30 @@ export async function findAllStatut() {
   }
 }
 
-
 export async function findAllSousStatut() {
   try {
     const [rows] = await pool.query("SELECT Sous_Statut FROM sous_status");
+    return rows;
+  } catch (error) {
+    console.error("Erreur récupération sous_status :", error);
+    throw error;
+  }
+}
+
+//exclure aappelr
+
+export async function findStatuts() {
+  try {
+    const [rows] = await pool.query("SELECT * FROM sous_status WHERE Sous_Statut <> 'À appeler'");
+    return rows;
+  } catch (error) {
+    console.error("Erreur récupération datastatut :", error);
+    throw error;
+  }
+}
+export async function findAllSousStatutsauf() {
+  try {
+    const [rows] = await pool.query("SELECT Sous_Statut FROM sous_status WHERE Sous_Statut <> 'À appeler' ");
     return rows;
   } catch (error) {
     console.error("Erreur récupération sous_status :", error);
