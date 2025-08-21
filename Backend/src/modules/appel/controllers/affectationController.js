@@ -21,7 +21,6 @@ export async function affecter(req, res) {
       });
     }
 
-    // Créer l'appel et affecter le client
     const nouvelAppel = await creerAppel({ idClient, idAgent, typeAgent, date, commentaire });
 
     res.json({
@@ -33,29 +32,27 @@ export async function affecter(req, res) {
     console.error("Erreur affecter:", error);
     res.status(500).json({ success: false, message: error.message });
   }
-}export async function putUpdateAppel(req, res) {
+}
+
+export async function putUpdateAppel(req, res) {
   try {
     const id = req.params.id;
     const { Sous_Statut, Commentaire } = req.body ?? {};
 
-    // Statuts que l'agent peut mettre
     if (typeof Sous_Statut !== "undefined") {
-      const allowed = ["ne repond pas", "traité"];
+      const allowed = ["ne repond pas", "traite"];
       if (!allowed.includes(String(Sous_Statut).toLowerCase())) {
         return res.status(400).json({ error: "Statut non autorisé" });
       }
     }
 
-    // ✅ d’abord vérifier que la ligne existe
-    const exists = await existsAppel(id);
+const exists = await existsAppel(id);
     if (!exists) {
       return res.status(404).json({ error: "Appel introuvable" });
     }
 
-    // puis tenter la mise à jour
-    const result = await updateAppelById(id, { Sous_Statut, Commentaire });
+const result = await updateAppelById(id, { Sous_Statut, Commentaire });
 
-    // ✅ si la ligne existe mais rien n’a changé (mêmes valeurs), on retourne OK quand même
     return res.json({
       ok: true,
       id,

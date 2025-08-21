@@ -1,17 +1,13 @@
-// src/modules/appel/services/appelService.js
 import { pool } from "../../../config/db.js";
 
-// 👉 adapte ici si ta colonne s'appelle autrement (ex: "Statut")
 const COL_STATUT = "Sous_Statut";
 
-// -------------------- LECTURE --------------------
 
 export async function findAllAppels() {
   const [rows] = await pool.query("SELECT * FROM `appel`");
   return rows;
 }
 
-/** Tous les appels sauf "À appeler" (sur Sous_Statut) */
 export async function findAppelSelectedStatut() {
   const [rows] = await pool.query(
     "SELECT * FROM `appel` WHERE TRIM(`Sous_Statut`) <> 'À appeler' OR `Sous_Statut` IS NULL"
@@ -19,7 +15,6 @@ export async function findAppelSelectedStatut() {
   return rows;
 }
 
-/** Filtrage flexible (agents, dates, durée, client, sous_statut, ...) */
 export async function getFilteredJournalAppels(filters = {}) {
   let {
     IDAgent_Reception = null,
@@ -84,7 +79,7 @@ export async function getFilteredJournalAppels(filters = {}) {
   return rows;
 }
 
-/** Uniquement les appels "À appeler" */
+/**  les appels "À appeler" */
 export async function findAppelsAAppeler() {
   const [rows] = await pool.query(`
     SELECT * FROM \`appel\`
@@ -94,9 +89,7 @@ export async function findAppelsAAppeler() {
   return rows;
 }
 
-// -------------------- UTILITAIRES --------------------
 
-/** Vérifie si un appel existe par IDAppel */
 export async function existsAppel(idAppel) {
   const [rows] = await pool.query(
     "SELECT 1 FROM `appel` WHERE `IDAppel` = ? LIMIT 1",
@@ -105,12 +98,7 @@ export async function existsAppel(idAppel) {
   return rows.length > 0;
 }
 
-// -------------------- UPDATE --------------------
 
-/**
- * Met à jour un appel (Sous_Statut, Commentaire) — champs optionnels
- * Retourne { affectedRows, changedRows, info }
- */
 export async function updateAppelById(idAppel, patch = {}) {
   const sets = [];
   const vals = [];

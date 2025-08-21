@@ -77,9 +77,9 @@ const AppelsAffectation = () => {
   const onSearchChange = (val) => applyFilters({ q: val, page: 1 });
 
   // couleurs badge
-  const getBadgeColor = (statut) => (statut === "À appeler" ? "primary" : "secondary");
+  const getBadgeColor = (statut) => (statut === "À APPELER" ? "primary" : "secondary");
 
-  const statuts = [{ value: "À appeler", label: "À appeler" }];
+  const statuts = [{ value: "À APPELER", label: "À APPELER" }];
 
   const handleRemoveChip = (key) => applyFilters({ [key]: "", page: 1 });
 
@@ -102,12 +102,15 @@ const AppelsAffectation = () => {
       const src = prev ?? rows;
       return src.map(r => (r.IDAppel === updated.IDAppel ? { ...r, ...updated } : r));
     });
-    // (optionnel) relancer un refetch côté hook si dispo
   };
 
   return (
     <>
-      <Header title="Appels à appeler" totalClients={total} />
+      <Header 
+      title="Appels à appeler"
+      name1="Total Appels"
+
+       totalClients={total} />
 
       <Container className="mt-[-3rem]" fluid>
         <Row>

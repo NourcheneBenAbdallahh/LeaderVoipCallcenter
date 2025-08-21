@@ -40,3 +40,15 @@ export async function findAllSousStatutsauf() {
     throw error;
   }
 }
+
+
+export async function findAppelSelectedStatutEdit() {
+
+  const [rows] = await pool.query(
+    `SELECT Sous_Statut 
+     FROM sous_status
+     WHERE TRIM(Sous_Statut) IN ('TRAITE', 'NE REPOND PAS')`
+  );
+  return rows;
+}
+

@@ -10,25 +10,40 @@ import { useJournalAppelsData } from "./hooks/useJournalAppelsData.jsx";
 
 const JournalAppels = () => {
   const {
-    rows, total, loading,
-    page, limit, sortBy, sortDir, filters,
-    setPage, applyFilters, clearOneFilter, resetAll, handleSort, dernierAppel,
+    rows,
+    total,
+    loading,
+    page,
+    limit,
+    sortBy,
+    sortDir,
+    filters,
+    setPage,
+    applyFilters,
+    clearOneFilter,
+    resetAll,
+    handleSort,
+    dernierAppel,
+    avgDurationLabel,totalTraites, 
+   grandTotal,
+   appelsAujourdHui,
+
   } = useJournalAppelsData();
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const toggleDrawer = () => setDrawerOpen(s => !s);
+  const toggleDrawer = () => setDrawerOpen((s) => !s);
 
   const [selectedRows, setSelectedRows] = useState([]);
 
   const handleSelectRow = (id, checked) => {
-    setSelectedRows(prev => {
+    setSelectedRows((prev) => {
       if (checked) return [...prev, id];
-      return prev.filter(x => x !== id);
+      return prev.filter((x) => x !== id);
     });
   };
 
   const handleSelectAll = (checked) => {
-    if (checked) setSelectedRows(rows.map(r => r.IDAppel));
+    if (checked) setSelectedRows(rows.map((r) => r.IDAppel));
     else setSelectedRows([]);
   };
 
@@ -53,17 +68,42 @@ const JournalAppels = () => {
       case "DU 1ER AU 10": return "light";
       case "JUSTE 1H":
       case "4H": return "secondary";
-      default: return "secondary"
-      case "À appeler": return "primary";   
-      case "Traité": return "success";           
-      case "ne repond pas": return "dark";
-
+      case "À APPELER": return "primary";
+      case "TRAITE": return "success";
+      case "NE REPOND PAS": return "dark";
+      default: return "secondary";
     }
   };
 
+  // Total calls (before filtering, assuming 'total' from useJournalAppelsData is the unfiltered total)
+  const totalAppels = total;
+
+  // Number of filtered calls (based on current filters, e.g., status)
+  const filteredAppels = rows.length;
+
+// Performance : % d'appels traités par rapport au total filtré
+  const pourcentageAppels = total > 0 ? `${((totalTraites / total) * 100).toFixed(1)}%` : "0%";
+const pctFiltreVsTotal = grandTotal > 0
+    ? `${((total / grandTotal) * 100).toFixed(1)}%`
+    : "0%";
+
   return (
     <>
-      <Header title="Journal des appels" totalClients={total} />
+      <Header
+        title="Journal des appels"
+        totalClients={total}
+        name1="Total Appels"
+        name2="Durée moyenne"    
+          name3="Appel Aujourd'hui"   
+
+        name4="Performance/Tot"
+        totalAppelsEmis={`${avgDurationLabel}`}
+        totalAppelsRecus={appelsAujourdHui}
+
+        attrb4={pctFiltreVsTotal}
+        
+      />
+
       <Container className="mt-[-3rem]" fluid>
         <Row>
           <Col>

@@ -1,7 +1,7 @@
 
 import { Card, CardBody, CardTitle, Container, Row, Col } from "reactstrap";
 
-const Header =  ({ totalClients, totalAppelsEmis, totalAppelsRecus }) => {
+const Header =  ({ totalClients, name1, name2,name3,name4,totalAppelsEmis, totalAppelsRecus,attrb4 }) => {
   return (
     <>
       <div className="header bg-gradient-info pb-8 pt-5 pt-md-8">
@@ -15,7 +15,7 @@ const Header =  ({ totalClients, totalAppelsEmis, totalAppelsRecus }) => {
                     <Row>
                       <div className="col">
                         <CardTitle tag="h5" className="text-uppercase text-muted mb-0">
-  Total Clients
+  {name1 ?? "-"}
 </CardTitle>
 <span className="h2 font-weight-bold mb-0">
   {totalClients ?? "-"}
@@ -43,7 +43,8 @@ const Header =  ({ totalClients, totalAppelsEmis, totalAppelsRecus }) => {
                     <Row>
                       <div className="col">
                        <CardTitle tag="h5" className="text-uppercase text-muted mb-0">
-  Appels Émis
+   {name2 ?? "-"}
+
 </CardTitle>
 <span className="h2 font-weight-bold mb-0">
   {totalAppelsEmis ?? "-"}
@@ -71,7 +72,7 @@ const Header =  ({ totalClients, totalAppelsEmis, totalAppelsRecus }) => {
                     <Row>
                       <div className="col">
                        <CardTitle tag="h5" className="text-uppercase text-muted mb-0">
-  Appels Reçus
+   {name3?? "-"}
 </CardTitle>
 <span className="h2 font-weight-bold mb-0">
   {totalAppelsRecus ?? "-"}
@@ -102,9 +103,14 @@ const Header =  ({ totalClients, totalAppelsEmis, totalAppelsRecus }) => {
                           tag="h5"
                           className="text-uppercase text-muted mb-0"
                         >
-                          Performance
+                            {name4 ?? "-"}
+
                         </CardTitle>
-                        <span className="h2 font-weight-bold mb-0">49,65%</span>
+                        <span className="h2 font-weight-bold mb-0">
+
+                            {attrb4 ?? "-"}
+
+                        </span>
                       </div>
                       <Col className="col-auto">
                         <div className="icon icon-shape bg-info text-white rounded-circle shadow">

@@ -5,7 +5,7 @@ import {
   findAppelsAAppeler,
   findAppelSelectedStatut,
   updateAppelById,
-  existsAppel,
+  existsAppel
 } from "../services/appelService.js";
 
 import { creerAppel } from "../services/affectationService.js";
@@ -52,6 +52,7 @@ export async function getAppelsAAppeler(req, res) {
     res.status(500).json({ success: false, message: error.message });
   }
 }
+
 
 // -------------------- AFFECTATION --------------------
 

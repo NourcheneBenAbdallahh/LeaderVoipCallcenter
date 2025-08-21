@@ -180,7 +180,8 @@ const handleSubmit = async () => {
             maxLength={1000}
             value={commentaire}
             onChange={(e) => setCommentaire(e.target.value)}
-            placeholder="Notes internes (optionnel)…"
+            placeholder="Notes internes…"
+            required  
           />
         </FormGroup>
       </ModalBody>

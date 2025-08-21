@@ -80,14 +80,7 @@ const ClientTable = ({
         <td className="px-4 py-2">{client.Ville || "—"}</td>
         <td className="px-4 py-2">
           {client.Telephone || "—"}{" "}
-          <Button
-            color="link"
-            onClick={() => handleCopy(client.Telephone)}
-            className="ml-2 text-lg"
-            title="Copier le numéro"
-          >
-            <FaClipboard />
-          </Button>
+     
         </td>
         <td className="px-4 py-2">{client.Email || "—"}</td>
         <td className="px-4 py-2">
@@ -112,3 +105,14 @@ const ClientTable = ({
 );
 
 export default ClientTable;
+
+
+/*copier 
+     <Button
+            color="link"
+            onClick={() => handleCopy(client.Telephone)}
+            className="ml-2 text-lg"
+            title="Copier le numéro"
+          >
+            <FaClipboard />
+          </Button>*/ 

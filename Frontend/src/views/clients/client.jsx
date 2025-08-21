@@ -217,6 +217,9 @@ useEffect(() => {
   return (
     <>
       <Header
+        name1="Total Clients"
+        name2="Total Appels Émis"
+        name3=" Total Appels Reçus"
         totalClients={clients.length}
         totalAppelsEmis={totalAppelsEmis}
         totalAppelsRecus={totalAppelsRecus}

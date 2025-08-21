@@ -1,4 +1,10 @@
-import { findAllStatut ,findAllSousStatut,findStatuts,findAllSousStatutsauf} from "../services/statutService.js";
+import { findAllStatut ,
+  findAllSousStatut,
+  findStatuts,
+  findAllSousStatutsauf,
+  findAppelSelectedStatutEdit
+
+} from "../services/statutService.js";
 
 export async function getAllSousStatut(req, res) {
   try {
@@ -37,5 +43,15 @@ export async function getStatutsauf(req, res) {
   } catch (error) {
     console.error("Erreur récupération sous_statut sauf:", error);  
     res.status(500).json({ message: "Erreur serveur", error });
+  }
+}
+
+export async function getAppelsAEditer(req, res) {
+  try {
+    const appels = await findAppelSelectedStatutEdit();
+    res.json(appels);
+  } catch (error) {
+    console.error("Erreur get apels editer:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 }

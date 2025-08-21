@@ -22,6 +22,7 @@ router.post("/journalappels/affecter",affecter);
 // Get /api/journalappels/aapeller
 router.get("/journalappels/aapeller", getAppelsAAppeler);
 
+
 //updateappel
 router.put("/journalappels/:id", putUpdateAppel);
 

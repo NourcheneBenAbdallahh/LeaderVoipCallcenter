@@ -64,7 +64,14 @@ const AgentsReception = () => {
 
   return (
     <>
-      <Header totalClients={agents.length} title="Liste des agents Réception" />
+      <Header
+      name1="Total Agents Récep"
+      name2="Compte Actif"
+      name3="Compte Inactif"
+       totalClients={agents.length}
+        title="Liste des agents Réception"
+              
+ />
       <Container className="mt-[-3rem]" fluid>
         <Row>
           <Col>

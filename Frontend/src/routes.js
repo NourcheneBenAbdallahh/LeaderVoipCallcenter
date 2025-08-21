@@ -18,13 +18,7 @@ var routes = [
     component: <Index />,
     layout: "/admin",
   },
-  {
-    path: "/user-profile",
-    name: "User Profile",
-    icon: "ni ni-single-02 text-yellow",
-    component: <Profile />,
-    layout: "/admin",
-  },
+ 
   {
     path: "/aapeler",
     name: "Journal Appels",
@@ -72,6 +66,12 @@ icon: "ni ni-mobile-button text-success",
     icon: "ni ni-circle-08 text-pink",
     component: <Register />,
     layout: "/auth",
+  }, {
+    path: "/user-profile",
+    name: "User Profile",
+    icon: "ni ni-single-02 text-yellow",
+    component: <Profile />,
+    layout: "/admin",
   },*/
 ];
 export default routes;
