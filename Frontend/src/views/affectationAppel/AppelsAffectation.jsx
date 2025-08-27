@@ -31,25 +31,46 @@ const AppelsAffectation = () => {
     setSelectedRows(checked ? (rows ?? []).map(r => r.IDAppel) : []);
   };
 
-  // agents
   const [agents, setAgents] = useState([]);
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const res = await axios.get("http://localhost:5000/api/agents");
-        const list = (Array.isArray(res.data) ? res.data : []).map(a => ({
-          id: a.IDAgent_Emmission ?? a.IDAgent ?? a.id,
-          nom: `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() || a.Login || `Agent ${a.IDAgent_Emmission ?? a.IDAgent ?? ""}`,
-        })).filter(a => a.id != null);
-        if (alive) setAgents(list);
-      } catch (e) {
-        console.error("Erreur chargement agents:", e);
-        if (alive) setAgents([]);
-      }
-    })();
-    return () => { alive = false; };
-  }, []);
+  let alive = true;
+  (async () => {
+    try {
+      const { data } = await axios.get("http://localhost:5000/api/agents");
+
+      const raw = Array.isArray(data?.agents)
+        ? data.agents
+        : (Array.isArray(data) ? data : []);
+
+      const filtered = raw;
+
+      const list = filtered
+        .map(a => {
+          const id =
+            a.IDAgent_Emmission ??
+            a.IDAgent_Reception ??
+            a.IDAgent ??
+            a.id;
+
+          const nom =
+            `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() ||
+            a.Login ||
+            `Agent ${id ?? ""}`;
+
+          return { id, nom };
+        })
+        .filter(a => a.id != null);
+
+      if (alive) setAgents(list);
+    } catch (e) {
+      console.error("Erreur chargement agents:", e);
+      if (alive) setAgents([]);
+    }
+  })();
+
+  return () => { alive = false; };
+}, []);
+
 
   // clients
   const [clients, setClients] = useState([]);

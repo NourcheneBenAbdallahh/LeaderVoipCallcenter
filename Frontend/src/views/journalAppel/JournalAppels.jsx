@@ -24,7 +24,7 @@ const JournalAppels = () => {
     resetAll,
     handleSort,
     dernierAppel,
-    avgDurationLabel,totalTraites, 
+    avgDurationLabel,
    grandTotal,
    appelsAujourdHui,
 
@@ -75,34 +75,45 @@ const JournalAppels = () => {
     }
   };
 
-  // Total calls (before filtering, assuming 'total' from useJournalAppelsData is the unfiltered total)
-  const totalAppels = total;
 
-  // Number of filtered calls (based on current filters, e.g., status)
-  const filteredAppels = rows.length;
-
-// Performance : % d'appels traités par rapport au total filtré
-  const pourcentageAppels = total > 0 ? `${((totalTraites / total) * 100).toFixed(1)}%` : "0%";
-const pctFiltreVsTotal = grandTotal > 0
+ const pctFiltreVsTotal = grandTotal > 0
     ? `${((total / grandTotal) * 100).toFixed(1)}%`
     : "0%";
+const kpiDeltas = {
+  total: { deltaPct: 5 },    // +5%
+  avg:   { deltaPct: -3.2 }, // -3.2%
+  today: { deltaPct: 0 },    // stable
+  perf:  { deltaPct: 12 }    // +12%
+};
+
+// petit helper
+const toDelta = (pct, label) => ({
+  value: `${Math.abs(Number(pct || 0)).toFixed(2)}%`,
+  up: Number(pct || 0) >= 0,
+  label,
+});
 
   return (
     <>
-      <Header
-        title="Journal des appels"
-        totalClients={total}
-        name1="Total Appels"
-        name2="Durée moyenne"    
-          name3="Appel Aujourd'hui"   
+     <Header
+  name1="Total Appels"
+  totalClients={total}
 
-        name4="Performance/Tot"
-        totalAppelsEmis={`${avgDurationLabel}`}
-        totalAppelsRecus={appelsAujourdHui}
+  name2="Durée moyenne"
+  totalAppelsEmis={avgDurationLabel}
 
-        attrb4={pctFiltreVsTotal}
-        
-      />
+  name3="Appels Aujourd'hui"
+  totalAppelsRecus={appelsAujourdHui}
+
+  name4="Performance/Tot"
+  attrb4={pctFiltreVsTotal}
+
+  delta1={toDelta(kpiDeltas.total.deltaPct, "Since last month")}
+  delta2={toDelta(kpiDeltas.avg.deltaPct,   "Since last week")}
+  delta3={toDelta(kpiDeltas.today.deltaPct, "Since yesterday")}
+  delta4={toDelta(kpiDeltas.perf.deltaPct,  "Since last month")}
+/>
+
 
       <Container className="mt-[-3rem]" fluid>
         <Row>

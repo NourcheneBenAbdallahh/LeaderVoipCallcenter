@@ -9,7 +9,10 @@ app.get("/api/hello", (_req, res) => {
   res.json({ message: "✅ Hello from backend!" });
 });
 
-const PORT = 5000;
+//const PORT =process.env.DB_PORT;
+//local
+const PORT =process.env.PORT;
+
 app.listen(PORT, () => {
   console.log(`🚀 Backend is running on http://localhost:${PORT}`);
 });

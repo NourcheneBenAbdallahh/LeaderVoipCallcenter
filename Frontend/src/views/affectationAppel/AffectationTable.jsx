@@ -105,7 +105,7 @@ const AffectationTable = ({
               <td style={{ maxWidth: 320 }} title={r.Commentaire || ""}>
                 <div className="text-truncate">{r.Commentaire || "—"}</div>
               </td>
-              <td>{r.Numero || "—"}</td>
+              <td>{`/admin/clients?focus=${r.Telephone}` || "—"}</td>
 
              <td>
   {r.IDClient ? (

@@ -21,8 +21,8 @@ export default function AffecterModal({
 
   // form local
   const [idAgent, setIdAgent] = useState("");
-  const [typeAgent, setTypeAgent] = useState("emission"); // fixé à emission par défaut
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0,10)); // yyyy-mm-dd
+  const [typeAgent, setTypeAgent] = useState("emission"); // "emission" | "reception"
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10)); // yyyy-mm-dd
   const [commentaire, setCommentaire] = useState("");
 
   const idClient = useMemo(() => client?.IDClient ?? "", [client]);
@@ -32,25 +32,57 @@ export default function AffecterModal({
     if (isOpen) {
       setIdAgent("");
       setTypeAgent("emission");
-      setDate(new Date().toISOString().slice(0,10));
+      setDate(new Date().toISOString().slice(0, 10));
       setCommentaire("");
+      setErrAgents("");
     }
   }, [isOpen]);
 
-  // charge la liste des agents au premier open
+  // charge la liste des agents à l'ouverture et quand le type change
   useEffect(() => {
     if (!isOpen) return;
     let alive = true;
+
     (async () => {
       try {
         setLoadingAgents(true);
         setErrAgents("");
-        const { data } = await axios.get(`${API}/agents`);
-        // mappe pour le select
-        const list = (Array.isArray(data) ? data : []).map(a => ({
-          id: a.IDAgent_Emmission ?? a.IDAgent ?? a.id,
-          nom: `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() || a.Login || `Agent ${a.IDAgent_Emmission ?? a.IDAgent ?? ""}`
-        })).filter(a => a.id != null);
+
+        const endpoint =
+          typeAgent === "reception" ? `${API}/agentsReception` : `${API}/agents`;
+
+        const { data } = await axios.get(endpoint);
+
+        const raw = Array.isArray(data?.agents)
+          ? data.agents
+          : (Array.isArray(data) ? data : null);
+
+        if (!raw) {
+          throw new Error(
+            `Format API inattendu pour ${endpoint} : attendu {agents:[...]} ou un tableau`
+          );
+        }
+
+        // Garde uniquement les actifs
+        const activeOnly = raw.filter(x => Number(x?.Etat_Compte) === 1);
+
+        const list = activeOnly
+          .map(a => {
+            const id =
+              a.IDAgent_Emmission ??
+              a.IDAgent_Reception ??
+              a.IDAgent ??
+              a.id;
+
+            const nom =
+              `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() ||
+              a.Login ||
+              `Agent ${id ?? ""}`;
+
+            return { id, nom };
+          })
+          .filter(a => a.id != null);
+
         if (alive) setAgents(list);
       } catch (e) {
         console.error("Erreur chargement agents:", e);
@@ -62,51 +94,46 @@ export default function AffecterModal({
         if (alive) setLoadingAgents(false);
       }
     })();
+
     return () => { alive = false; };
-  }, [isOpen]);
+  }, [isOpen, typeAgent]);
 
   const [submitting, setSubmitting] = useState(false);
   const canSubmit = idClient && idAgent && typeAgent && date && !submitting;
 
-//date
-const today = new Date();
-today.setHours(0,0,0,0); // reset à minuit
-const todayStr = today.toISOString().split("T")[0];
+  // date min = aujourd'hui
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split("T")[0];
 
+  const handleSubmit = async () => {
+    if (!canSubmit) return;
 
-  /**const maxDate = new Date();
-maxDate.setDate(maxDate.getDate() + 7);
-const maxDateStr = maxDate.toISOString().split("T")[0];max={maxDateStr}  */
-const handleSubmit = async () => {
-  if (!canSubmit) return;
+    // Validation de la date (>= aujourd'hui)
+    const selectedDate = new Date(date);
+    if (selectedDate < today) {
+      alert("La date sélectionnée doit être aujourd'hui ou une date future.");
+      return;
+    }
 
-  // Validation de la date
-  const selectedDate = new Date(date);
-  if (selectedDate < today) {
-    alert("La date sélectionnée doit être aujourd'hui ou une date future.");
-    return;
-  }
-
-  try {
-    setSubmitting(true);
-    await axios.post(`${API}/journalappels/affecter`, {
-      idClient: Number(idClient),
-      idAgent: Number(idAgent),
-      typeAgent, // "emission"
-      date, // "YYYY-MM-DD"
-      commentaire: commentaire?.trim() || null,
-    });
-    // succès
-    onSuccess && onSuccess();
-    onClose && onClose();
-  } catch (e) {
-    console.error("Erreur affectation:", e);
-    alert("Échec de l’affectation. Vérifie les champs et réessaie.");
-  } finally {
-    setSubmitting(false);
-  }
-};
-
+    try {
+      setSubmitting(true);
+      await axios.post(`${API}/journalappels/affecter`, {
+        idClient: Number(idClient),
+        idAgent: Number(idAgent),
+        typeAgent, // "emission" ou "reception"
+        date,      // "YYYY-MM-DD"
+        commentaire: commentaire?.trim() || null,
+      });
+      onSuccess && onSuccess();
+      onClose && onClose();
+    } catch (e) {
+      console.error("Erreur affectation:", e);
+      alert("Échec de l’affectation. Vérifie les champs et réessaie.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <Modal isOpen={isOpen} toggle={onClose} centered size="lg">
@@ -125,11 +152,13 @@ const handleSubmit = async () => {
               <Input
                 type="select"
                 value={typeAgent}
-                onChange={(e) => setTypeAgent(e.target.value)}
+                onChange={(e) => {
+                  setTypeAgent(e.target.value);
+                  setIdAgent(""); // reset l’agent si on change de type
+                }}
               >
                 <option value="emission">Émission</option>
-                {/* Si tu veux autoriser réception, dé-commente: */}
-                {/* <option value="reception">Réception</option> */}
+                <option value="reception">Réception</option>
               </Input>
             </FormGroup>
           </Col>
@@ -138,7 +167,9 @@ const handleSubmit = async () => {
         <Row>
           <Col md="6">
             <FormGroup>
-              <Label>Agent (Émission)</Label>
+              <Label>
+                Agent ({typeAgent === "reception" ? "Réception" : "Émission"})
+              </Label>
               {loadingAgents ? (
                 <div className="d-flex align-items-center gap-2">
                   <Spinner size="sm" /> Chargement des agents…
@@ -153,21 +184,26 @@ const handleSubmit = async () => {
                 >
                   <option value="">— Choisir un agent —</option>
                   {agents.map(a => (
-                    <option key={a.id} value={a.id}>{a.nom} (#{a.id})</option>
+                    <option key={a.id} value={a.id}>
+                      {a.nom} (#{a.id})
+                    </option>
                   ))}
                 </Input>
+              )}
+              {!loadingAgents && !errAgents && agents.length === 0 && (
+                <div className="text-muted mt-1">Aucun agent actif disponible.</div>
               )}
             </FormGroup>
           </Col>
           <Col md="6">
             <FormGroup>
               <Label>Date</Label>
-        <Input
-      type="date"
-      value={date}
-      onChange={(e) => setDate(e.target.value)}
-      min={todayStr} // Restreint la sélection à aujourd'hui et aux dates futures
-    />
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                min={todayStr} 
+              />
             </FormGroup>
           </Col>
         </Row>
@@ -181,10 +217,11 @@ const handleSubmit = async () => {
             value={commentaire}
             onChange={(e) => setCommentaire(e.target.value)}
             placeholder="Notes internes…"
-            required  
+            required
           />
         </FormGroup>
       </ModalBody>
+
       <ModalFooter>
         <Button color="secondary" onClick={onClose} disabled={submitting}>
           Annuler

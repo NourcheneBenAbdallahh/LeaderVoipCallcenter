@@ -1,4 +1,4 @@
-import { pool } from "../../../config/db.js";
+import  pool  from "../../../config/db.js";
 
 // Vérifie si un agent existe
 export async function findAgentById(idAgent) {

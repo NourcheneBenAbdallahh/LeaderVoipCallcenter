@@ -1,3 +1,6 @@
+
+import "dotenv/config";
+
 import express from "express";
 import cors from "cors";
 import agentRoutes from "./src/modules/agent/routes/agentRoutes.js";
@@ -7,6 +10,8 @@ import sousStatutRoutes from "./src/modules/sous_statut/routes/statutRoutes.js";
 import agentReceptionRoutes from "./src/modules/agentReception/routes/agentReceptionRoutes.js";
 import JournalRoutes from "./src/modules/journalAppelAffetation/routes/JournalRoutes.js";
 import authRoutes from "./src/modules/auth/routes/authRoutes.js";
+//import { initDB } from "./src/config/db.js";
+
 
 
 const app = express();
@@ -27,11 +32,21 @@ app.use("/auth", authRoutes);
 import dotenv from "dotenv";
 dotenv.config();
 
-const PORT = process.env.PORT || 5000;
+//const PORT = process.env.DB_PORT ;
+//local
+const PORT =process.env.PORT;
+
+
 app.get("/test", (req, res) => {
   res.send("✅ Serveur fonctionne !");
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Backend lancé sur http://localhost:${PORT}`);
+ console.log(` Backend lancé sur ${PORT}`);
+  // console.log(`✅ Backend lancé sur http://localhost:${PORT}`);
 });
+/*
+(async () => {
+  await initDB({ retries: 3, delayMs: 1000 });
+  app.listen(PORT, () => console.log(`✅ Backend lancé sur http://localhost:${PORT}`));
+})();*/

@@ -14,6 +14,13 @@ import { useLocation } from "react-router-dom";
 const AgentsReception = () => {
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // --- Nouveaux états pour les stats récupérées ---
+  const [total, setTotal] = useState(0);
+  const [actifs, setActifs] = useState(0);
+  const [inactifs, setInactifs] = useState(0);
+  const [totalAgent, setTotalAgent] = useState(0);
+
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const agentsPerPage = 10;
@@ -24,23 +31,70 @@ const AgentsReception = () => {
   const [highlightId, setHighlightId] = useState(null);
   const rowRef = useRef(null);
 
-  useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/agentsReception")
-      .then((res) => {
-        setAgents(res.data);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Erreur chargement agents réception :", err);
-        setLoading(false);
-      });
-  }, []);
+useEffect(() => {
+  axios
+    .get("http://localhost:5000/api/agentsReception")
+    .then((res) => {
+      const data = res.data;
+      console.log(data);
+
+      // 1) Nouveau format avec stats
+      if (data && Array.isArray(data.agents)) {
+        setAgents(data.agents);
+        setTotal(Number(data.total ?? data.agents.length) || 0);
+
+        // 👉 AJOUTE CETTE LIGNE :
+        setTotalAgent(Number(data?.totalAgent ?? 0));
+
+        const a = Number(data?.comptes?.actifs ?? 0) || 0;
+        const i = Number(data?.comptes?.inactifs ?? 0) || 0;
+
+        if (a + i === 0) {
+          const calcA = data.agents.filter(x => Number(x.Etat_Compte) === 1).length;
+          const calcI = data.agents.length - calcA;
+          setActifs(calcA);
+          setInactifs(calcI);
+        } else {
+          setActifs(a);
+          setInactifs(i);
+        }
+      }
+      // 2) Ancien format: tableau simple
+      else if (Array.isArray(data)) {
+        setAgents(data);
+        setTotal(data.length);
+        const calcA = data.filter(x => Number(x.Etat_Compte) === 1).length;
+        const calcI = data.length - calcA;
+        setActifs(calcA);
+        setInactifs(calcI);
+        setTotalAgent(Number(data?.totalAgent ?? 0));
+      } else {
+        setAgents([]);
+        setTotal(0);
+        setActifs(0);
+        setInactifs(0);
+        setTotalAgent(0);
+        console.warn("Format API inattendu pour /agentsReception :", data);
+      }
+
+      setLoading(false);
+    })
+    .catch((err) => {
+      console.error("Erreur chargement agents réception :", err);
+      setAgents([]);
+      setTotal(0);
+      setActifs(0);
+      setInactifs(0);
+      setTotalAgent(0);
+      setLoading(false);
+    });
+}, []);
+
 
   const filteredAgents = useMemo(() => {
     const s = searchTerm.toLowerCase();
     return agents.filter((agent) =>
-      Object.values(agent).join(" ").toLowerCase().includes(s)
+      Object.values(agent ?? {}).join(" ").toLowerCase().includes(s)
     );
   }, [agents, searchTerm]);
 
@@ -60,18 +114,23 @@ const AgentsReception = () => {
   const indexOfLast = currentPage * agentsPerPage;
   const indexOfFirst = indexOfLast - agentsPerPage;
   const paginatedAgents = filteredAgents.slice(indexOfFirst, indexOfLast);
-  const totalAgents = filteredAgents.length;
+  const totalFiltered = filteredAgents.length;
 
   return (
     <>
       <Header
-      name1="Total Agents Récep"
-      name2="Compte Actif"
-      name3="Compte Inactif"
-       totalClients={agents.length}
+        name1="Total Agents Récep"
+        name2="Compte Actif"
+        name3="Compte Inactif"  
+       name4="Total Agents"
+
+        totalClients={total}
+        totalAppelsEmis={actifs}
+        totalAppelsRecus={inactifs}
+        attrb4={totalAgent}
+
         title="Liste des agents Réception"
-              
- />
+      />
       <Container className="mt-[-3rem]" fluid>
         <Row>
           <Col>
@@ -103,7 +162,7 @@ const AgentsReception = () => {
                     />
                     <ClientPagination
                       currentPage={currentPage}
-                      totalClients={totalAgents}
+                      totalClients={totalFiltered}
                       clientsPerPage={agentsPerPage}
                       setCurrentPage={setCurrentPage}
                     />

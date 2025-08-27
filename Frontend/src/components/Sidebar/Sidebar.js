@@ -104,6 +104,8 @@ const Sidebar = (props) => {
               alt={logo.imgAlt}
               className="navbar-brand-img"
               src={logo.imgSrc}
+                  style={{ maxHeight: "3.5rem", width: "auto", objectFit: "contain" }} // ⬅️ ajouté
+
             />
           </NavbarBrand>
         ) : null}
@@ -172,11 +174,17 @@ const Sidebar = (props) => {
                 <Col className="collapse-brand" xs="6">
                   {logo.innerLink ? (
                     <Link to={logo.innerLink}>
-                      <img alt={logo.imgAlt} src={logo.imgSrc} />
+                      <img alt={logo.imgAlt} src={logo.imgSrc} 
+                          style={{ maxHeight: "3.5rem", width: "auto", objectFit: "contain" }} // ⬅️ ajouté
+
+                      />
+                      
                     </Link>
                   ) : (
                     <a href={logo.outterLink}>
-                      <img alt={logo.imgAlt} src={logo.imgSrc} />
+                      <img alt={logo.imgAlt} src={logo.imgSrc} 
+                          style={{ maxHeight: "3.5rem", width: "auto", objectFit: "contain" }} // ⬅️ ajouté
+/>
                     </a>
                   )}
                 </Col>

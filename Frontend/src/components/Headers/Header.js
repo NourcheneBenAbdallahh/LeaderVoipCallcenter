@@ -1,26 +1,42 @@
-
 import { Card, CardBody, CardTitle, Container, Row, Col } from "reactstrap";
 
-const Header =  ({ totalClients, name1, name2,name3,name4,totalAppelsEmis, totalAppelsRecus,attrb4 }) => {
+const Header = ({
+  totalClients, name1,
+  totalAppelsEmis, name2,
+  totalAppelsRecus, name3,
+  attrb4, name4,
+  delta1, delta2, delta3, delta4,
+}) => {
+  const renderDelta = (d) => {
+    if (!d) return null; 
+    return (
+      <p className="mt-3 mb-0 text-muted text-sm">
+        <span className={`${d.up ? "text-success" : "text-danger"} mr-2`}>
+          <i className={`fas ${d.up ? "fa-arrow-up" : "fa-arrow-down"}`} /> {d.value}
+        </span>{" "}
+        <span className="text-nowrap">{d.label}</span>
+      </p>
+    );
+  };
+
   return (
     <>
       <div className="header bg-gradient-info pb-8 pt-5 pt-md-8">
         <Container fluid>
           <div className="header-body">
-            {/* Card stats */}
             <Row>
+              {/* ---- Card 1 ---- */}
               <Col lg="6" xl="3">
                 <Card className="card-stats mb-4 mb-xl-0">
                   <CardBody>
                     <Row>
                       <div className="col">
                         <CardTitle tag="h5" className="text-uppercase text-muted mb-0">
-  {name1 ?? "-"}
-</CardTitle>
-<span className="h2 font-weight-bold mb-0">
-  {totalClients ?? "-"}
-</span>
-
+                          {name1 ?? "-"}
+                        </CardTitle>
+                        <span className="h2 font-weight-bold mb-0">
+                          {totalClients ?? "-"}
+                        </span>
                       </div>
                       <Col className="col-auto">
                         <div className="icon icon-shape bg-danger text-white rounded-circle shadow">
@@ -28,28 +44,23 @@ const Header =  ({ totalClients, name1, name2,name3,name4,totalAppelsEmis, total
                         </div>
                       </Col>
                     </Row>
-                    <p className="mt-3 mb-0 text-muted text-sm">
-                      <span className="text-success mr-2">
-                        <i className="fa fa-arrow-up" /> 3.48%
-                      </span>{" "}
-                      <span className="text-nowrap">Since last month</span>
-                    </p>
+                    {renderDelta(delta1)}
                   </CardBody>
                 </Card>
               </Col>
+
+              {/* ---- Card 2 ---- */}
               <Col lg="6" xl="3">
                 <Card className="card-stats mb-4 mb-xl-0">
                   <CardBody>
                     <Row>
                       <div className="col">
-                       <CardTitle tag="h5" className="text-uppercase text-muted mb-0">
-   {name2 ?? "-"}
-
-</CardTitle>
-<span className="h2 font-weight-bold mb-0">
-  {totalAppelsEmis ?? "-"}
-</span>
-
+                        <CardTitle tag="h5" className="text-uppercase text-muted mb-0">
+                          {name2 ?? "-"}
+                        </CardTitle>
+                        <span className="h2 font-weight-bold mb-0">
+                          {totalAppelsEmis ?? "-"}
+                        </span>
                       </div>
                       <Col className="col-auto">
                         <div className="icon icon-shape bg-warning text-white rounded-circle shadow">
@@ -57,27 +68,23 @@ const Header =  ({ totalClients, name1, name2,name3,name4,totalAppelsEmis, total
                         </div>
                       </Col>
                     </Row>
-                    <p className="mt-3 mb-0 text-muted text-sm">
-                      <span className="text-danger mr-2">
-                        <i className="fas fa-arrow-down" /> 3.48%
-                      </span>{" "}
-                      <span className="text-nowrap">Since last week</span>
-                    </p>
+                    {renderDelta(delta2)}
                   </CardBody>
                 </Card>
               </Col>
+
+              {/* ---- Card 3 ---- */}
               <Col lg="6" xl="3">
                 <Card className="card-stats mb-4 mb-xl-0">
                   <CardBody>
                     <Row>
                       <div className="col">
-                       <CardTitle tag="h5" className="text-uppercase text-muted mb-0">
-   {name3?? "-"}
-</CardTitle>
-<span className="h2 font-weight-bold mb-0">
-  {totalAppelsRecus ?? "-"}
-</span>
-
+                        <CardTitle tag="h5" className="text-uppercase text-muted mb-0">
+                          {name3 ?? "-"}
+                        </CardTitle>
+                        <span className="h2 font-weight-bold mb-0">
+                          {totalAppelsRecus ?? "-"}
+                        </span>
                       </div>
                       <Col className="col-auto">
                         <div className="icon icon-shape bg-yellow text-white rounded-circle shadow">
@@ -85,31 +92,22 @@ const Header =  ({ totalClients, name1, name2,name3,name4,totalAppelsEmis, total
                         </div>
                       </Col>
                     </Row>
-                    <p className="mt-3 mb-0 text-muted text-sm">
-                      <span className="text-warning mr-2">
-                        <i className="fas fa-arrow-down" /> 1.10%
-                      </span>{" "}
-                      <span className="text-nowrap">Since yesterday</span>
-                    </p>
+                    {renderDelta(delta3)}
                   </CardBody>
                 </Card>
               </Col>
+
+              {/* ---- Card 4 ---- */}
               <Col lg="6" xl="3">
                 <Card className="card-stats mb-4 mb-xl-0">
                   <CardBody>
                     <Row>
                       <div className="col">
-                        <CardTitle
-                          tag="h5"
-                          className="text-uppercase text-muted mb-0"
-                        >
-                            {name4 ?? "-"}
-
+                        <CardTitle tag="h5" className="text-uppercase text-muted mb-0">
+                          {name4 ?? "-"}
                         </CardTitle>
                         <span className="h2 font-weight-bold mb-0">
-
-                            {attrb4 ?? "-"}
-
+                          {attrb4 ?? "-"}
                         </span>
                       </div>
                       <Col className="col-auto">
@@ -118,12 +116,7 @@ const Header =  ({ totalClients, name1, name2,name3,name4,totalAppelsEmis, total
                         </div>
                       </Col>
                     </Row>
-                    <p className="mt-3 mb-0 text-muted text-sm">
-                      <span className="text-success mr-2">
-                        <i className="fas fa-arrow-up" /> 12%
-                      </span>{" "}
-                      <span className="text-nowrap">Since last month</span>
-                    </p>
+                    {renderDelta(delta4)}
                   </CardBody>
                 </Card>
               </Col>
