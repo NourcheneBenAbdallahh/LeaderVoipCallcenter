@@ -56,7 +56,7 @@ const ClientTable = ({
     <tbody>
   {clients.map((client) => {
     const isHighlight = String(client.IDClient) === String(highlightId);
-    const isChecked = selectedClients.includes(client.IDClient); // ✅ ici c’est bon
+    const isChecked = selectedClients.includes(client.IDClient); 
 
     return (
       <tr

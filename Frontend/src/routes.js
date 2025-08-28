@@ -1,13 +1,10 @@
 
 import Index from "views/Index.js";
-import Profile from "views/examples/Profile.js";
-import Register from "views/examples/Register.js";
-import Tables from "views/examples/Tables.js";
+
 import Clients from "views/clients/client";
 import Agents from "views/agents/agent";
 import JournalAppels from "views/journalAppel/JournalAppels";
 import AgentsReception from "views/agentsreceptions/AgentsReception";
-import Login from "views/login/Login";
 import AppelsAffectation from "views/affectationAppel/AppelsAffectation";
 
 var routes = [
@@ -53,7 +50,14 @@ icon: "ni ni-mobile-button text-success",
     component: <JournalAppels />,
     layout: "/admin",
   },
-  /*{
+  /*
+  
+  import Profile from "views/examples/Profile.js";
+import Register from "views/examples/Register.js";
+import Tables from "views/examples/Tables.js";
+import Login from "views/login/Login";
+
+  {
     path: "/login",
     name: "Login",
     icon: "ni ni-key-25 text-info",

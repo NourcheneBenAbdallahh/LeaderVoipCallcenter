@@ -22,7 +22,6 @@ import { useLocation } from "react-router-dom";
 import { useMemo } from "react";
 
 import AffecterModal from "./Affectation/AffecterModal";
-import { toast } from "react-toastify"; // si tu l'utilises (optionnel)
 
 const Clients = () => {
   const [clients, setClients] = useState([]);

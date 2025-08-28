@@ -1,5 +1,5 @@
-import React from "react";
-import { Table, Badge, Button } from "reactstrap";
+import React , { useState } from "react";
+import { Table, Badge, Button,Modal, ModalHeader, ModalBody } from "reactstrap";
 import { Link } from "react-router-dom";
 
 const fmtDuree = (s) => {
@@ -41,7 +41,6 @@ const AffectationTable = ({
   sortBy,
   sortDir,
   onSort,
-  getBadgeColor,
   dernierAppel,
   selectedRows,
   onSelectRow,
@@ -52,7 +51,18 @@ const AffectationTable = ({
 
   const allSelected = data.length > 0 && data.every(r => selectedRows.includes(r.IDAppel));
 
+
+    const [modalOpen, setModalOpen] = useState(false);
+  const [commentContent, setCommentContent] = useState("");
+
+  const handleCommentClick = (comment) => {
+    setCommentContent(comment);
+    setModalOpen(true);
+  };
+
   return (
+        <>
+
     <Table className="align-middle table-flush" responsive hover>
       <thead style={{ backgroundColor: "#e0f0ff" }}>
         <tr className="bg-gray-100">
@@ -103,9 +113,17 @@ const AffectationTable = ({
               <td>{typeBadge(r.Type_Appel)}</td>
               <td>{fmtDuree(r.Duree_Appel)}</td>
               <td style={{ maxWidth: 320 }} title={r.Commentaire || ""}>
-                <div className="text-truncate">{r.Commentaire || "—"}</div>
-              </td>
-              <td>{`/admin/clients?focus=${r.Telephone}` || "—"}</td>
+                  <div
+                    className="text-truncate"
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleCommentClick(r.Commentaire || "—")}
+                  >
+                    {r.Commentaire || "—"}
+                  </div>
+                </td>
+          <td>
+            {r.Numero || "—"}
+          </td>
 
              <td>
   {r.IDClient ? (
@@ -162,11 +180,10 @@ const AffectationTable = ({
 </td>
 
               <td>
-                <Badge color={getBadgeColor(r.Sous_Statut)}>{r.Sous_Statut || "—"}</Badge>
-              </td>
+<Badge color="danger">{r.Sous_Statut || "—"}</Badge>              </td>
               <td>
                 <Button color="success" size="sm"
-                onClick={() => onEdit && onEdit(r)}  // 👈 ici
+                onClick={() => onEdit && onEdit(r)}  
 
                 >Modifier</Button>
               </td>
@@ -175,6 +192,12 @@ const AffectationTable = ({
         })}
       </tbody>
     </Table>
+     {/* Modal en dehors du tableau */}
+      <Modal isOpen={modalOpen} toggle={() => setModalOpen(false)}>
+        <ModalHeader toggle={() => setModalOpen(false)}>Commentaire</ModalHeader>
+        <ModalBody>{commentContent}</ModalBody>
+      </Modal>
+    </>
   );
 };
 

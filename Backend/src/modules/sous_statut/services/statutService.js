@@ -2,7 +2,7 @@ import  pool  from "../../../config/db.js";
 
 export async function findAllStatut() {
   try {
-    const [rows] = await pool.query("SELECT * FROM sous_status");
+    const [rows] = await pool.query("SELECT * FROM Sous_Status");
     return rows;
   } catch (error) {
     console.error("Erreur récupération datastatut :", error);
@@ -12,7 +12,7 @@ export async function findAllStatut() {
 
 export async function findAllSousStatut() {
   try {
-    const [rows] = await pool.query("SELECT Sous_Statut FROM sous_status");
+    const [rows] = await pool.query("SELECT Sous_Statut FROM Sous_Status");
     return rows;
   } catch (error) {
     console.error("Erreur récupération sous_status :", error);
@@ -24,7 +24,7 @@ export async function findAllSousStatut() {
 
 export async function findStatuts() {
   try {
-    const [rows] = await pool.query("SELECT * FROM sous_status WHERE Sous_Statut <> 'À appeler'");
+    const [rows] = await pool.query("SELECT * FROM Sous_Status WHERE Sous_Statut <> 'À appeler'");
     return rows;
   } catch (error) {
     console.error("Erreur récupération datastatut :", error);
@@ -33,7 +33,7 @@ export async function findStatuts() {
 }
 export async function findAllSousStatutsauf() {
   try {
-    const [rows] = await pool.query("SELECT Sous_Statut FROM sous_status WHERE Sous_Statut <> 'À appeler' ");
+    const [rows] = await pool.query("SELECT Sous_Statut FROM Sous_Status WHERE Sous_Statut <> 'À appeler' ");
     return rows;
   } catch (error) {
     console.error("Erreur récupération sous_status :", error);
@@ -46,7 +46,7 @@ export async function findAppelSelectedStatutEdit() {
 
   const [rows] = await pool.query(
     `SELECT Sous_Statut 
-     FROM sous_status
+     FROM Sous_Status
      WHERE TRIM(Sous_Statut) IN ('TRAITE', 'NE REPOND PAS')`
   );
   return rows;

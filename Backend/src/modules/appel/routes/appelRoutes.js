@@ -5,8 +5,10 @@ import { getAllAppels,
     getSelectedAppels
 } from "../controllers/appelControllers.js";
 import { affecter ,
-    putUpdateAppel
+    putUpdateAppel,getDerniersAppelsController
 } from "../controllers/affectationController.js";
+
+import { getAppelsAujourdHui, getAppelsHier } from "../controllers/countappelController.js";
 
 const router = express.Router();
 
@@ -25,5 +27,13 @@ router.get("/journalappels/aapeller", getAppelsAAppeler);
 
 //updateappel
 router.put("/journalappels/:id", putUpdateAppel);
+
+//count Get /api/count-today
+router.get("/count-today", getAppelsAujourdHui);
+router.get("/count-yesterday", getAppelsHier);
+
+
+//dashbor  Get /api/recents
+router.get("/recents", getDerniersAppelsController);
 
 export default router;

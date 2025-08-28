@@ -1,5 +1,6 @@
 import { 
-  creerAppel 
+  creerAppel ,getDerniersAppels
+
 } from "../services/affectationService.js";
 
 
@@ -61,6 +62,17 @@ const result = await updateAppelById(id, { Sous_Statut, Commentaire });
     });
   } catch (error) {
     console.error("Erreur update appel :", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+}
+
+export async function getDerniersAppelsController(req, res) {
+  try {
+    const { limit } = req.query; // ?limit=10
+    const rows = await getDerniersAppels(limit);
+    res.json(rows);
+  } catch (err) {
+    console.error("Erreur getDerniersAppels :", err);
     res.status(500).json({ message: "Erreur serveur" });
   }
 }

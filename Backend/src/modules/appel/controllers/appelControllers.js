@@ -14,7 +14,8 @@ import { creerAppel } from "../services/affectationService.js";
 
 export async function getAllAppels(req, res) {
   try {
-    const appels = await findAllAppels();
+    const limit = parseInt(req.query.limit) || 300;
+    const appels = await findAllAppels(limit);
     res.json(appels);
   } catch (error) {
     console.error("Erreur récupération appels :", error);

@@ -2,7 +2,7 @@ import  pool  from "../../../config/db.js";
 
 export async function findAllClients() {
   try {
-    const [rows] = await pool.query("SELECT * FROM client");
+    const [rows] = await pool.query("SELECT * FROM Client");
     return rows;
   } catch (error) {
     console.error("Erreur récupération clients :", error);
@@ -19,7 +19,7 @@ export async function findFilteredClients({
   try {
     const [rows] = await pool.query(
       `
-      SELECT * FROM client
+      SELECT * FROM Client
       WHERE NB_appel_Emis BETWEEN ? AND ?
       AND NB_Appel_Recu BETWEEN ? AND ?
       `,
@@ -41,7 +41,7 @@ export async function countFilteredClients({
   try {
     const [rows] = await pool.query(
       `
-      SELECT COUNT(*) AS total FROM client
+      SELECT COUNT(*) AS total FROM Client
       WHERE NB_appel_Emis BETWEEN ? AND ?
       AND NB_Appel_Recu BETWEEN ? AND ?
       `,

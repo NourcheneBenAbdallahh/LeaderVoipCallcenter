@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import pool  from "../../../config/db.js";
 
 export async function findUserByLogin(login) {
-  const [rows] = await pool.query(`SELECT * FROM agent WHERE Login = ? LIMIT 1`, [login]);
+  const [rows] = await pool.query(`SELECT * FROM Agent WHERE Login = ? LIMIT 1`, [login]);
   return rows[0];
 }
 /*Pass avec hash

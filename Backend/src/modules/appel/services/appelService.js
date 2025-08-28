@@ -3,14 +3,15 @@ import  pool  from "../../../config/db.js";
 const COL_STATUT = "Sous_Statut";
 
 
-export async function findAllAppels() {
-  const [rows] = await pool.query("SELECT * FROM `appel`");
+export async function findAllAppels(limit = 300) {
+  const [rows] = await pool.query("SELECT * FROM `Appel` ORDER BY Date DESC LIMIT ?", [limit]);
   return rows;
 }
 
+
 export async function findAppelSelectedStatut() {
   const [rows] = await pool.query(
-    "SELECT * FROM `appel` WHERE TRIM(`Sous_Statut`) <> 'À appeler' OR `Sous_Statut` IS NULL"
+    "SELECT * FROM `Appel` WHERE TRIM(`Sous_Statut`) <> 'À appeler' OR `Sous_Statut` IS NULL"
   );
   return rows;
 }
@@ -37,13 +38,13 @@ export async function getFilteredJournalAppels(filters = {}) {
   let sql = `
     SELECT * ,
       CASE WHEN Date = (
-        SELECT MAX(Date) FROM appel a2
+        SELECT MAX(Date) FROM Appel a2
         WHERE 1=1
           ${IDAgent_Reception ? " AND a2.IDAgent_Reception = ?" : ""}
           ${IDAgent_Emmission ? " AND a2.IDAgent_Emmission = ?" : ""}
           ${IDClient ? " AND a2.IDClient = ?" : ""}
       ) THEN 1 ELSE 0 END AS isLast
-    FROM appel
+    FROM Appel
     WHERE 1=1
   `;
   const params = [];
@@ -82,7 +83,7 @@ export async function getFilteredJournalAppels(filters = {}) {
 /**  les appels "À appeler" */
 export async function findAppelsAAppeler() {
   const [rows] = await pool.query(`
-    SELECT * FROM \`appel\`
+    SELECT * FROM \`Appel\`
     WHERE TRIM(\`Sous_Statut\`) = 'À appeler'
     ORDER BY Date DESC, Heure DESC
   `);
@@ -92,7 +93,7 @@ export async function findAppelsAAppeler() {
 
 export async function existsAppel(idAppel) {
   const [rows] = await pool.query(
-    "SELECT 1 FROM `appel` WHERE `IDAppel` = ? LIMIT 1",
+    "SELECT 1 FROM `Appel` WHERE `IDAppel` = ? LIMIT 1",
     [idAppel]
   );
   return rows.length > 0;
@@ -117,7 +118,7 @@ export async function updateAppelById(idAppel, patch = {}) {
   }
 
   vals.push(idAppel);
-  const sql = `UPDATE \`appel\` SET ${sets.join(", ")} WHERE \`IDAppel\` = ? LIMIT 1`;
+  const sql = `UPDATE \`Appel\` SET ${sets.join(", ")} WHERE \`IDAppel\` = ? LIMIT 1`;
   const [result] = await pool.query(sql, vals);
 
   return {

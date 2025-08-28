@@ -29,7 +29,6 @@ const AgentTable = ({ agents, highlightId, rowRef }) => {
           <th>Ajout</th>
           <th>Modif</th>
           <th>Suppression</th>
-          <th>Copier Login</th>
         </tr>
       </thead>
       <tbody>
@@ -51,11 +50,7 @@ const AgentTable = ({ agents, highlightId, rowRef }) => {
               <td>{agent.Ajout ? "✅" : "❌"}</td>
               <td>{agent.Modification ? "✅" : "❌"}</td>
               <td>{agent.Supression ? "✅" : "❌"}</td>
-              <td>
-                <Button color="link" onClick={() => handleCopy(agent.Login)} title="Copier login">
-                  <FaClipboard />
-                </Button>
-              </td>
+             
             </tr>
           );
         })}

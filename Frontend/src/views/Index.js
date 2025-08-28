@@ -1,338 +1,148 @@
-/*!
-
-=========================================================
-* Argon Dashboard React - v1.2.4
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/argon-dashboard-react
-* Copyright 2024 Creative Tim (https://www.creative-tim.com)
-* Licensed under MIT (https://github.com/creativetimofficial/argon-dashboard-react/blob/master/LICENSE.md)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
-import { useState } from "react";
-// node.js library that concatenates classes (strings)
-import classnames from "classnames";
-// javascipt plugin for creating charts
-import Chart from "chart.js";
-// react plugin used to create charts
-import { Line, Bar } from "react-chartjs-2";
-// reactstrap components
+// src/views/Index.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Button,
-  Card,
-  CardHeader,
-  CardBody,
-  NavItem,
-  NavLink,
-  Nav,
-  Progress,
-  Table,
-  Container,
-  Row,
-  Col,
+  Card, CardBody, CardHeader, Container, Row, Col, Table, Badge, Spinner,
 } from "reactstrap";
-
-// core components
-import {
-  chartOptions,
-  parseOptions,
-  chartExample1,
-  chartExample2,
-} from "variables/charts.js";
-
 import Header from "components/Headers/Header.js";
+import { Link } from "react-router-dom";
 
-const Index = (props) => {
-  const [activeNav, setActiveNav] = useState(1);
-  const [chartExample1Data, setChartExample1Data] = useState("data1");
+const getBadgeColor = (statut) => {
+  switch (statut) {
+    case "PROMESSE": return "warning";
+    case "RECEPTION": return "primary";
+    case "RAPPEL": return "danger";
+    case "PLUS 2H":
+    case "PLUS 6H": return "secondary";
+    case "NRP":
+    case "REFUS":
+    case "CLIENT FROID": return "dark";
+    case "RECLAMATION":
+    case "LIGNE SUSPENDU": return "info";
+    case "+75 ANS":
+    case "+65 ANS": return "success";
+    case "TCHATCHE":
+    case "ATTENTE PAYEMENT FACTURE":
+    case "A RAPPELER": return "info";
+    case "DU 10 AU 20":
+    case "DU 1ER AU 10": return "light";
+    case "JUSTE 1H":
+    case "4H": return "secondary";
+    case "À APPELER": return "primary";
+    case "TRAITE": return "success";
+    case "NE REPOND PAS": return "dark";
+    case "À appeler": return "danger";
 
-  if (window.Chart) {
-    parseOptions(Chart, chartOptions());
+    default: return "secondary";
   }
+};
 
-  const toggleNavs = (e, index) => {
-    e.preventDefault();
-    setActiveNav(index);
-    setChartExample1Data("data" + index);
-  };
+// helper durée (mm:ss)
+const fmtDuree = (s) => {
+  const n = Number(s) || 0;
+  const m = Math.floor(n / 60);
+  const sec = n % 60;
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+};
+
+const typeBadge = (t) => {
+  if (t === 1 || t === "1") return <Badge color="info">1</Badge>;
+  if (t === 2 || t === "2") return <Badge color="success">2</Badge>;
+  if (t === 0 || t === "0") return <Badge color="secondary">0</Badge>;
+  return <Badge color="light">{t}</Badge>;
+};
+
+export default function Index() {
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🔄 fetch des 10 derniers appels depuis le backend
+  useEffect(() => {
+    const ac = new AbortController();
+    async function load() {
+      try {
+        setLoading(true);
+        const res = await fetch(`http://localhost:5000/api/recents?limit=10`, { signal: ac.signal });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setRows(Array.isArray(data) ? data : []);
+      } catch (e) {
+        console.error("Erreur chargement derniers appels:", e);
+        setRows([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+    return () => ac.abort();
+  }, []);
+
+  // on garde memo au cas où
+  const derniers10 = useMemo(() => rows.slice(0, 10), [rows]);
+
   return (
     <>
       <Header />
-      {/* Page content */}
       <Container className="mt--7" fluid>
         <Row>
-          <Col className="mb-5 mb-xl-0" xl="8">
-            <Card className="bg-gradient-default shadow">
-              <CardHeader className="bg-transparent">
-                <Row className="align-items-center">
-                  <div className="col">
-                    <h6 className="text-uppercase text-light ls-1 mb-1">
-                      Overview
-                    </h6>
-                    <h2 className="text-white mb-0">Sales value</h2>
-                  </div>
-                  <div className="col">
-                    <Nav className="justify-content-end" pills>
-                      <NavItem>
-                        <NavLink
-                          className={classnames("py-2 px-3", {
-                            active: activeNav === 1,
-                          })}
-                          href="#pablo"
-                          onClick={(e) => toggleNavs(e, 1)}
-                        >
-                          <span className="d-none d-md-block">Month</span>
-                          <span className="d-md-none">M</span>
-                        </NavLink>
-                      </NavItem>
-                      <NavItem>
-                        <NavLink
-                          className={classnames("py-2 px-3", {
-                            active: activeNav === 2,
-                          })}
-                          data-toggle="tab"
-                          href="#pablo"
-                          onClick={(e) => toggleNavs(e, 2)}
-                        >
-                          <span className="d-none d-md-block">Week</span>
-                          <span className="d-md-none">W</span>
-                        </NavLink>
-                      </NavItem>
-                    </Nav>
-                  </div>
-                </Row>
+          <Col xl="12">
+            <Card className="shadow">
+              <CardHeader className="border-0 d-flex justify-content-between align-items-center">
+                <h3 className="mb-0">Derniers appels (aperçu)</h3>
+                <Link className="btn btn-sm btn-primary" to="/admin/aapeler">
+                  Ouvrir le journal
+                </Link>
               </CardHeader>
-              <CardBody>
-                {/* Chart */}
-                <div className="chart">
-                  <Line
-                    data={chartExample1[chartExample1Data]}
-                    options={chartExample1.options}
-                    getDatasetAtEvent={(e) => console.log(e)}
-                  />
-                </div>
+              <CardBody className="pt-0">
+                {loading ? (
+                  <div className="text-center my-4">
+                    <Spinner color="primary" /> Chargement…
+                  </div>
+                ) : (
+                  <Table className="align-items-center table-flush" responsive hover>
+                    <thead style={{ backgroundColor: "#e0f0ff" }}>
+                      <tr>
+                        <th>ID</th>
+                        <th>Date</th>
+                        <th>Heure</th>
+                        <th>Type</th>
+                        <th>Durée</th>
+                        <th>Numéro</th>
+                        <th>Client</th>
+                        <th>Sous statut</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {derniers10.map((r) => (
+                        <tr key={r.IDAppel}>
+                          <td>{r.IDAppel}</td>
+                          <td>{r.Date ? new Date(r.Date).toLocaleDateString() : "—"}</td>
+                          <td>{r.Heure || "—"}</td>
+                          <td>{typeBadge(r.Type_Appel)}</td>
+                          <td>{fmtDuree(r.Duree_Appel)}</td>
+                          <td>{r.Numero || "—"}</td>
+                          <td>{r.IDClient ?? "—"}</td>
+                          <td>
+                            <Badge color={getBadgeColor(r.Sous_Statut)}>
+                              {r.Sous_Statut || "—"}
+                            </Badge>
+                          </td>
+                        </tr>
+                      ))}
+                      {derniers10.length === 0 && (
+                        <tr>
+                          <td colSpan="8" className="text-center text-muted py-4">
+                            Aucun appel à afficher.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
+                )}
               </CardBody>
-            </Card>
-          </Col>
-          <Col xl="4">
-            <Card className="shadow">
-              <CardHeader className="bg-transparent">
-                <Row className="align-items-center">
-                  <div className="col">
-                    <h6 className="text-uppercase text-muted ls-1 mb-1">
-                      Performance
-                    </h6>
-                    <h2 className="mb-0">Total orders</h2>
-                  </div>
-                </Row>
-              </CardHeader>
-              <CardBody>
-                {/* Chart */}
-                <div className="chart">
-                  <Bar
-                    data={chartExample2.data}
-                    options={chartExample2.options}
-                  />
-                </div>
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-        <Row className="mt-5">
-          <Col className="mb-5 mb-xl-0" xl="8">
-            <Card className="shadow">
-              <CardHeader className="border-0">
-                <Row className="align-items-center">
-                  <div className="col">
-                    <h3 className="mb-0">Page visits</h3>
-                  </div>
-                  <div className="col text-right">
-                    <Button
-                      color="primary"
-                      href="#pablo"
-                      onClick={(e) => e.preventDefault()}
-                      size="sm"
-                    >
-                      See all
-                    </Button>
-                  </div>
-                </Row>
-              </CardHeader>
-              <Table className="align-items-center table-flush" responsive>
-                <thead className="thead-light">
-                  <tr>
-                    <th scope="col">Page name</th>
-                    <th scope="col">Visitors</th>
-                    <th scope="col">Unique users</th>
-                    <th scope="col">Bounce rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <th scope="row">/argon/</th>
-                    <td>4,569</td>
-                    <td>340</td>
-                    <td>
-                      <i className="fas fa-arrow-up text-success mr-3" /> 46,53%
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">/argon/index.html</th>
-                    <td>3,985</td>
-                    <td>319</td>
-                    <td>
-                      <i className="fas fa-arrow-down text-warning mr-3" />{" "}
-                      46,53%
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">/argon/charts.html</th>
-                    <td>3,513</td>
-                    <td>294</td>
-                    <td>
-                      <i className="fas fa-arrow-down text-warning mr-3" />{" "}
-                      36,49%
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">/argon/tables.html</th>
-                    <td>2,050</td>
-                    <td>147</td>
-                    <td>
-                      <i className="fas fa-arrow-up text-success mr-3" /> 50,87%
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">/argon/profile.html</th>
-                    <td>1,795</td>
-                    <td>190</td>
-                    <td>
-                      <i className="fas fa-arrow-down text-danger mr-3" />{" "}
-                      46,53%
-                    </td>
-                  </tr>
-                </tbody>
-              </Table>
-            </Card>
-          </Col>
-          <Col xl="4">
-            <Card className="shadow">
-              <CardHeader className="border-0">
-                <Row className="align-items-center">
-                  <div className="col">
-                    <h3 className="mb-0">Social traffic</h3>
-                  </div>
-                  <div className="col text-right">
-                    <Button
-                      color="primary"
-                      href="#pablo"
-                      onClick={(e) => e.preventDefault()}
-                      size="sm"
-                    >
-                      See all
-                    </Button>
-                  </div>
-                </Row>
-              </CardHeader>
-              <Table className="align-items-center table-flush" responsive>
-                <thead className="thead-light">
-                  <tr>
-                    <th scope="col">Referral</th>
-                    <th scope="col">Visitors</th>
-                    <th scope="col" />
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <th scope="row">Facebook</th>
-                    <td>1,480</td>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <span className="mr-2">60%</span>
-                        <div>
-                          <Progress
-                            max="100"
-                            value="60"
-                            barClassName="bg-gradient-danger"
-                          />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Facebook</th>
-                    <td>5,480</td>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <span className="mr-2">70%</span>
-                        <div>
-                          <Progress
-                            max="100"
-                            value="70"
-                            barClassName="bg-gradient-success"
-                          />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Google</th>
-                    <td>4,807</td>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <span className="mr-2">80%</span>
-                        <div>
-                          <Progress max="100" value="80" />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">Instagram</th>
-                    <td>3,678</td>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <span className="mr-2">75%</span>
-                        <div>
-                          <Progress
-                            max="100"
-                            value="75"
-                            barClassName="bg-gradient-info"
-                          />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row">twitter</th>
-                    <td>2,645</td>
-                    <td>
-                      <div className="d-flex align-items-center">
-                        <span className="mr-2">30%</span>
-                        <div>
-                          <Progress
-                            max="100"
-                            value="30"
-                            barClassName="bg-gradient-warning"
-                          />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </Table>
             </Card>
           </Col>
         </Row>
       </Container>
     </>
   );
-};
-
-export default Index;
+}

@@ -71,7 +71,7 @@ export function useJournalAppelsData() {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:5000/api/appelsselect");
+const res = await axios.get("http://localhost:5000/api/appelsselect?limit=300");
       const arr = Array.isArray(res.data) ? res.data : (res.data.rows || []);
       setAllRows(arr || []);
     } catch (e) {
@@ -83,6 +83,7 @@ export function useJournalAppelsData() {
   }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
 
   // ======= FILTRAGE côté client =======
   const filtered = useMemo(() => {
@@ -104,8 +105,16 @@ export function useJournalAppelsData() {
       if (dureeMin && Number(r.Duree_Appel) < Number(dureeMin)) return false;
       if (dureeMax && Number(r.Duree_Appel) > Number(dureeMax)) return false;
       // Date (on compare sur la partie date uniquement)
-      if (dateFrom && r.Date && new Date(r.Date).toISOString().slice(0,10) < dateFrom) return false;
-      if (dateTo   && r.Date && new Date(r.Date).toISOString().slice(0,10) > dateTo)   return false;
+  const getLocalDateOnly = (dateStr) => {
+  const date = new Date(dateStr);
+  const tzDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+  return tzDate.toISOString().slice(0, 10);
+};
+
+const localDate = getLocalDateOnly(r.Date);
+if (dateFrom && localDate < dateFrom) return false;
+if (dateTo && localDate > dateTo) return false;
+
       // Client
       if (IDClient && String(r.IDClient) !== String(IDClient)) return false;
       // Recherche globale

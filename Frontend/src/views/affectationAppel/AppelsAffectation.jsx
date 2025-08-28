@@ -98,7 +98,6 @@ const AppelsAffectation = () => {
   const onSearchChange = (val) => applyFilters({ q: val, page: 1 });
 
   // couleurs badge
-  const getBadgeColor = (statut) => (statut === "À APPELER" ? "primary" : "secondary");
 
   const statuts = [{ value: "À APPELER", label: "À APPELER" }];
 
@@ -158,7 +157,6 @@ const AppelsAffectation = () => {
                       sortBy={null}
                       sortDir={null}
                       onSort={() => {}}
-                      getBadgeColor={getBadgeColor}
                       dernierAppel={null}
                       agentNameById={agentNameById}
                       clientNameById={clientNameById}

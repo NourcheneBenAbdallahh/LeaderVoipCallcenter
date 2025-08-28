@@ -11,22 +11,23 @@ const pool = mysql.createPool({
 });
 
 export default pool;
-
-export async function initDB({ retries = 3, delayMs = 1000 } = {}) {
+// initDB plus robuste
+export async function initDB({ retries = 8, delayMs = 1000 } = {}) {
   let attempt = 0;
-  while (true) {
+  while (attempt < retries) {
     try {
-      console.log(" Tentative de connexion MySQL...");
+      attempt++;
+      console.log(`🔌 Tentative DB #${attempt} ...`);
       const conn = await pool.getConnection();
       await conn.ping();
       conn.release();
-      console.log("Connexion MySQL OK");
+      console.log("✅ Connexion MySQL OK");
       return;
     } catch (err) {
-      attempt++;
-      console.error("Erreur connexion :", err.message, err.code, err.address, err.port);
-      if (attempt >= retries) throw err;
-      await new Promise(r => setTimeout(r, delayMs));
+      console.error("❌ Erreur connexion :", err.code || err.message);
+      const backoff = delayMs * Math.min(8, 2 ** (attempt - 1)); // 1s, 2s, 4s, 8s, ...
+      await new Promise(r => setTimeout(r, backoff));
     }
   }
+  throw new Error("DB non joignable après retries");
 }

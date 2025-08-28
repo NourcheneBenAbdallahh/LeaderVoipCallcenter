@@ -2,13 +2,13 @@ import  pool  from "../../../config/db.js";
 
 // Vérifie si un agent existe
 export async function findAgentById(idAgent) {
-  const [rows] = await pool.query("SELECT * FROM agent WHERE IDAgent_Emmission = ?", [idAgent]);
+  const [rows] = await pool.query("SELECT * FROM Agent WHERE IDAgent_Emmission = ?", [idAgent]);
   return rows[0];
 }
 
 // Vérifie si un client existe
 export async function findClientById(idClient) {
-  const [rows] = await pool.query("SELECT * FROM client WHERE IDClient = ?", [idClient]);
+  const [rows] = await pool.query("SELECT * FROM Client WHERE IDClient = ?", [idClient]);
   return rows[0];
 }
 
@@ -29,7 +29,7 @@ export async function creerAppel({ idClient, idAgent, typeAgent, date, commentai
 
   // Insérer l'appel
   const sql = `
-    INSERT INTO appel (
+    INSERT INTO Appel (
       Date, Heure, Type_Appel, Duree_Appel, Commentaire, Numero,
       IDClient, IDAgent_Reception, IDAgent_Emmission, Sous_Statut
     )
@@ -38,10 +38,10 @@ export async function creerAppel({ idClient, idAgent, typeAgent, date, commentai
   const values = [
     dateSQL,
     heure,
-    "AFFECTATION",
+    "0",
     0,
     commentaire || "",
-    client.Numero || "",
+    client.Telephone || "",
     idClient,
     typeAgent === "reception" ? idAgent : null,
     typeAgent === "emission" ? idAgent : null,
@@ -49,6 +49,7 @@ export async function creerAppel({ idClient, idAgent, typeAgent, date, commentai
   ];
 
   const [result] = await pool.query(sql, values);
+console.log("Client récupéré :", client);
 
   return {
     IDAppel: result.insertId,
@@ -59,4 +60,24 @@ export async function creerAppel({ idClient, idAgent, typeAgent, date, commentai
     Date: dateSQL,
     Heure: heure
   };
+}
+
+
+export async function getDerniersAppels(limit = 10) {
+  const lim = Number(limit) > 0 ? Number(limit) : 10;
+
+  // Si vous avez une colonne datetime (ex: CreatedAt), préférez ORDER BY CreatedAt DESC
+  const sql = `
+    SELECT 
+      IDAppel, Date, Heure, Type_Appel, Duree_Appel, Numero, IDClient, Sous_Statut
+    FROM Appel
+    ORDER BY
+      -- On privilégie l'ordre par Date+Heure si présents
+      COALESCE(CONCAT(Date, ' ', Heure), '1970-01-01 00:00:00') DESC,
+      IDAppel DESC
+    LIMIT ?
+  `;
+
+  const [rows] = await pool.query(sql, [lim]);
+  return rows;
 }

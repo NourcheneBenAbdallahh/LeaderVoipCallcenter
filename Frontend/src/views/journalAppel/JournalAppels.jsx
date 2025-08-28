@@ -24,9 +24,7 @@ const JournalAppels = () => {
     resetAll,
     handleSort,
     dernierAppel,
-    avgDurationLabel,
-   grandTotal,
-   appelsAujourdHui,
+    avgDurationLabel
 
   } = useJournalAppelsData();
 
@@ -75,45 +73,17 @@ const JournalAppels = () => {
     }
   };
 
-
- const pctFiltreVsTotal = grandTotal > 0
-    ? `${((total / grandTotal) * 100).toFixed(1)}%`
-    : "0%";
-const kpiDeltas = {
-  total: { deltaPct: 5 },    // +5%
-  avg:   { deltaPct: -3.2 }, // -3.2%
-  today: { deltaPct: 0 },    // stable
-  perf:  { deltaPct: 12 }    // +12%
-};
-
-// petit helper
-const toDelta = (pct, label) => ({
-  value: `${Math.abs(Number(pct || 0)).toFixed(2)}%`,
-  up: Number(pct || 0) >= 0,
-  label,
-});
-
   return (
     <>
-     <Header
-  name1="Total Appels"
-  totalClients={total}
+      <Header
+        title="Journal des appels"
+        totalClients={total}
+        name1="Total Appels"
+        name2="Durée moyenne"    
 
-  name2="Durée moyenne"
-  totalAppelsEmis={avgDurationLabel}
+        totalAppelsEmis={`${avgDurationLabel}`}
 
-  name3="Appels Aujourd'hui"
-  totalAppelsRecus={appelsAujourdHui}
-
-  name4="Performance/Tot"
-  attrb4={pctFiltreVsTotal}
-
-  delta1={toDelta(kpiDeltas.total.deltaPct, "Since last month")}
-  delta2={toDelta(kpiDeltas.avg.deltaPct,   "Since last week")}
-  delta3={toDelta(kpiDeltas.today.deltaPct, "Since yesterday")}
-  delta4={toDelta(kpiDeltas.perf.deltaPct,  "Since last month")}
-/>
-
+      />
 
       <Container className="mt-[-3rem]" fluid>
         <Row>
