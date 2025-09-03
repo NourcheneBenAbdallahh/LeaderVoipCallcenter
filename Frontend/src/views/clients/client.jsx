@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import axios from "axios";
+// src/views/clients/Clients.jsx
+import React, { useState, useEffect, useMemo } from "react";
+import api from "api";
 import ClientTable from "./ClientTableComponent";
 
 import {
@@ -17,35 +18,49 @@ import ClientSearchBar from "./ClientSearchBarComponent";
 import ClientFilters from "./ClientFiltersComponent";
 import ClientPagination from "./ClientPaginationComponent";
 
-//import id client
 import { useLocation } from "react-router-dom";
-import { useMemo } from "react";
-
 import AffecterModal from "./Affectation/AffecterModal";
+//const API_BASE = "http://localhost:5000/api";
+
+const API_BASE = "/api";
 
 const Clients = () => {
+  // ---- state principal (paginé depuis le backend) ----
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sortField, setSortField] = useState("");
-  const [sortDirection, setSortDirection] = useState("asc");
+
+  // filtres (côté serveur)
   const [minEmis, setMinEmis] = useState("");
   const [maxEmis, setMaxEmis] = useState("");
   const [minRecus, setMinRecus] = useState("");
   const [maxRecus, setMaxRecus] = useState("");
+
+  // tri (local, sur la page courante seulement)
+  const [sortField, setSortField] = useState("");
+  const [sortDirection, setSortDirection] = useState("asc");
+
+  // recherche (local, sur la page courante uniquement — si tu veux global, ajoute un paramètre q côté backend)
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // pagination (côté serveur)
   const [currentPage, setCurrentPage] = useState(1);
-  const clientsPerPage = 10;
+  const clientsPerPage = 20; // 10/20/50 -> choisi; le backend limite hard à 200 dans le service
+  const [totalCount, setTotalCount] = useState(0);
 
-  const totalAppelsEmis = clients.reduce((sum, client) => sum + client.NB_appel_Emis, 0);
-  const totalAppelsRecus = clients.reduce((sum, client) => sum + client.NB_Appel_Recu, 0);
+  // pour header (totaux de la page courante; si tu veux les totaux globaux, on fera une route /clientsopti/aggregates)
+  const totalAppelsEmis = clients.reduce((sum, c) => sum + (Number(c.NB_appel_Emis) || 0), 0);
+  const totalAppelsRecus = clients.reduce((sum, c) => sum + (Number(c.NB_Appel_Recu) || 0), 0);
 
-  //clientbuId
+  // focus ?highlight id via URL ?focus=123
   const location = useLocation();
-const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
-const focusId = searchParams.get("focus"); // string ou null
-const [highlightId, setHighlightId] = useState(null);
+  const searchParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const focusId = searchParams.get("focus");
+  const [highlightId, setHighlightId] = useState(null);
 
+  // sélection multi
+  const [selectedClients, setSelectedClients] = useState([]);
 
+  // ---------------- utils UI ----------------
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -58,8 +73,8 @@ const [highlightId, setHighlightId] = useState(null);
   const sortClients = (data) => {
     if (!sortField) return data;
     return [...data].sort((a, b) => {
-      const aValue = a[sortField] || "";
-      const bValue = b[sortField] || "";
+      const aValue = a[sortField] ?? "";
+      const bValue = b[sortField] ?? "";
       if (typeof aValue === "number" && typeof bValue === "number") {
         return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
       }
@@ -70,7 +85,7 @@ const [highlightId, setHighlightId] = useState(null);
   };
 
   const handleCopy = (text) => {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
+    if (navigator.clipboard?.writeText) {
       navigator.clipboard.writeText(text)
         .then(() => alert("Numéro copié !"))
         .catch(() => alert("Erreur de copie."));
@@ -102,26 +117,56 @@ const [highlightId, setHighlightId] = useState(null);
     }
   };
 
-  const fetchFilteredClients = async (minEmis, maxEmis, minRecus, maxRecus) => {
+  // ---------------- appels API ----------------
+  const loadClients = async () => {
     setLoading(true);
     try {
-      const response = await axios.post("http://localhost:5000/api/clients/filter", {
-        appelsEmisMin: parseInt(minEmis) || 0,
-        appelsEmisMax: parseInt(maxEmis) || 1000000,
-        appelsRecusMin: parseInt(minRecus) || 0,
-        appelsRecusMax: parseInt(maxRecus) || 1000000,
+      const res = await api.get(`${API_BASE}/clientsopti`, {
+        params: {
+          page: currentPage,
+          limit: clientsPerPage,
+          appelsEmisMin: minEmis || 0,
+          appelsEmisMax: maxEmis || 1000000,
+          appelsRecusMin: minRecus || 0,
+          appelsRecusMax: maxRecus || 1000000,
+        },
       });
-      setClients(response.data.clients);
-      setLoading(false);
+      const { clients: data, total } = res.data;
+      setClients(Array.isArray(data) ? data : []);
+      setTotalCount(Number(total) || 0);
     } catch (error) {
-      console.error("Erreur lors du filtrage des clients :", error);
+      console.error("Erreur lors de la récupération des clients :", error);
+    } finally {
       setLoading(false);
     }
   };
 
-  //selectionner
-const [selectedClients, setSelectedClients] = useState([]);
+  // Au montage & à chaque changement de page/filtres -> fetch paginé
+  useEffect(() => {
+    loadClients();
+    // reset sélection à chaque page
+    setSelectedClients([]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage, minEmis, maxEmis, minRecus, maxRecus, clientsPerPage]);
 
+  // Appliquer filtres via bouton "Appliquer" (dans ClientFilters) => POST /filter + reset page 1
+  const fetchFilteredClients = async (minE, maxE, minR, maxR) => {
+    // on pousse d'abord les filtres dans le state, puis on va page 1
+    setMinEmis(minE);
+    setMaxEmis(maxE);
+    setMinRecus(minR);
+    setMaxRecus(maxR);
+    setCurrentPage(1);
+    // pas besoin d'appeler POST ici : useEffect relancera GET /clientsopti avec les bons params
+  };
+
+  // focusId : on surligne si l’ID est présent sur la page courante
+  useEffect(() => {
+    if (!focusId) return;
+    setHighlightId(Number(focusId));
+  }, [focusId]);
+
+  // sélection
   const handleSelectClient = (id, checked) => {
     setSelectedClients(prev => {
       if (checked) return [...prev, id];
@@ -130,70 +175,22 @@ const [selectedClients, setSelectedClients] = useState([]);
   };
 
   const handleSelectAllClients = (checked) => {
-    if (checked) setSelectedClients(paginatedClients.map(c => c.IDClient));
+    if (checked) setSelectedClients(sortedAndSearched.map(c => c.IDClient));
     else setSelectedClients([]);
   };
-  useEffect(() => {
-    axios
-      .get("http://localhost:5000/api/clients")
-      .then((response) => {
-        setClients(response.data);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Erreur lors de la récupération des clients :", error);
-        setLoading(false);
-      });
-  }, []);
 
-  //idimport
-useEffect(() => {
-  if (!focusId || clients.length === 0) return;
-
-  // 1) applique la recherche (si tu veux garder ta barre de recherche comme point d'entrée)
-  setSearchTerm(focusId);
-
-  // 2) reproduis le pipeline (filtre + tri) pour trouver l’index du client
-  const filtered = clients.filter((c) =>
-    Object.values(c).join(" ").toLowerCase().includes(String(focusId).toLowerCase())
-  );
-  const sorted = sortClients(filtered);
-
-  // essaie de trouver le client EXACT par ID (plus précis que la recherche globale)
-  const exactIdx = sorted.findIndex(c => String(c.IDClient) === String(focusId));
-  const idx = exactIdx >= 0 ? exactIdx : 0;
-
-  // 3) calcule la page à afficher
-  const page = Math.floor(idx / clientsPerPage) + 1;
-  setCurrentPage(page);
-
-  // 4) garde l’ID à surligner
-  setHighlightId(Number(focusId));
-}, [focusId, clients]); // eslint-disable-line react-hooks/exhaustive-deps
-
-
-  const filteredClients = clients.filter((client) => {
-    const matchSearch =
-      searchTerm === "" ||
-      Object.values(client)
-        .join(" ")
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase());
-    const matchEmis = minEmis === "" || client.NB_appel_Emis >= parseInt(minEmis);
-    const matchRecus = minRecus === "" || client.NB_Appel_Recu >= parseInt(minRecus);
-    return matchSearch && matchEmis && matchRecus;
+  // filtre recherche (local à la page)
+  const filteredLocal = clients.filter((client) => {
+    if (!searchTerm) return true;
+    return Object.values(client).join(" ").toLowerCase().includes(searchTerm.toLowerCase());
   });
 
-  const sortedClients = sortClients(filteredClients);
-  const totalClients = sortedClients.length;
-  const totalPages = Math.ceil(totalClients / clientsPerPage);
-  const indexOfLastClient = currentPage * clientsPerPage;
-  const indexOfFirstClient = indexOfLastClient - clientsPerPage;
-  const paginatedClients = sortedClients.slice(indexOfFirstClient, indexOfLastClient);
+  const sortedLocal = sortClients(filteredLocal);
+  // NB : pagination est déjà côté serveur; ici on n’applique plus de slice.
+  const sortedAndSearched = sortedLocal;
 
-
-//affectation client
- const [affModalOpen, setAffModalOpen] = useState(false);
+  // affectation
+  const [affModalOpen, setAffModalOpen] = useState(false);
   const [clientToAffect, setClientToAffect] = useState(null);
 
   const handleOpenAffecter = (client) => {
@@ -207,22 +204,21 @@ useEffect(() => {
   };
 
   const handleAffectationSuccess = () => {
-    // Option: refetch la liste des clients / appels, ou toast
-    // refetch();
-    // toast.success("Affectation réussie !");
     console.log("Affectation OK !");
+    // éventuellement: loadClients();
   };
 
   return (
     <>
       <Header
         name1="Total Clients"
-        name2="Total Appels Émis"
-        name3=" Total Appels Reçus"
-        totalClients={clients.length}
-        totalAppelsEmis={totalAppelsEmis}
-        totalAppelsRecus={totalAppelsRecus}
+        name2="Tot Appels Émis (page)"
+        name3="Tot Appels Reçus (page)"
+        totalClients={totalCount}          // total global (vient du backend)
+        totalAppelsEmis={totalAppelsEmis}  // somme de la page
+        totalAppelsRecus={totalAppelsRecus} // somme de la page
       />
+
       <Container className="mt-[-3rem]" fluid>
         <Row>
           <Col>
@@ -233,10 +229,14 @@ useEffect(() => {
                     <h3 className="mb-0">Liste des clients</h3>
                   </Col>
                   <Col xs="12" md="6" className="text-md-right mt-2 md:mt-0">
-                    <ClientSearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+                    <ClientSearchBar
+                      searchTerm={searchTerm}
+                      setSearchTerm={setSearchTerm}
+                    />
                   </Col>
                 </Row>
               </CardHeader>
+
               <CardBody>
                 <ClientFilters
                   minEmis={minEmis}
@@ -247,36 +247,39 @@ useEffect(() => {
                   setMinRecus={setMinRecus}
                   maxRecus={maxRecus}
                   setMaxRecus={setMaxRecus}
-                  fetchFilteredClients={fetchFilteredClients}
+                  fetchFilteredClients={fetchFilteredClients} // déclenche page 1 + useEffect
                 />
+
                 {loading ? (
                   <div className="text-center">
                     <Spinner color="primary" /> Chargement...
                   </div>
                 ) : (
                   <ClientTable
-                    clients={paginatedClients}
+                    clients={sortedAndSearched}     // déjà paginés par le serveur
                     sortField={sortField}
                     sortDirection={sortDirection}
                     handleSort={handleSort}
                     handleCopy={handleCopy}
                     getBadgeColor={getBadgeColor}
-                      highlightId={highlightId}            //parid
-                       selectedClients={selectedClients}     
-                    onSelectClient={handleSelectClient}          
-                    onSelectAllClients={handleSelectAllClients} 
-                    onAffecter={handleOpenAffecter}  
+                    highlightId={highlightId}
+                    selectedClients={selectedClients}
+                    onSelectClient={handleSelectClient}
+                    onSelectAllClients={handleSelectAllClients}
+                    onAffecter={handleOpenAffecter}
                   />
                 )}
-                 <AffecterModal
-        isOpen={affModalOpen}
-        onClose={handleCloseAffecter}
-        client={clientToAffect}
-        onSuccess={handleAffectationSuccess}
-      />
+
+                <AffecterModal
+                  isOpen={affModalOpen}
+                  onClose={handleCloseAffecter}
+                  client={clientToAffect}
+                  onSuccess={handleAffectationSuccess}
+                />
+
                 <ClientPagination
                   currentPage={currentPage}
-                  totalClients={totalClients}
+                  totalClients={totalCount}       // total global
                   clientsPerPage={clientsPerPage}
                   setCurrentPage={setCurrentPage}
                 />
@@ -287,4 +290,6 @@ useEffect(() => {
       </Container>
     </>
   );
-};export default Clients;
+};
+
+export default Clients;

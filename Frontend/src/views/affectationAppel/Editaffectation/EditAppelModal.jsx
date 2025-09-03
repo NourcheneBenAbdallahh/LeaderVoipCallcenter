@@ -4,9 +4,11 @@ import {
   Modal, ModalHeader, ModalBody, ModalFooter,
   Button, FormGroup, Label, Input, Spinner, FormFeedback
 } from "reactstrap";
-import axios from "axios";
+import api from "api";
+//const API = "http://localhost:5000/api";
 
-const API = "http://localhost:5000/api";
+const API = "/api";
+
 const FALLBACK_SOUS_STATUTS = ["RECEPTION","RAPPEL","PROMESSE","+75 ANS","PLUS 6H","RECLAMATION"];
 const COMMENT_MAX = 1000;
 
@@ -40,7 +42,7 @@ export default function EditAppelModal({ isOpen, onClose, appel, onSaved }) {
       try {
         setSsLoading(true);
         setSsError("");
-        const res = await axios.get(`${API}/sous_statutsedd`);
+        const res = await api.get(`${API}/sous_statutsedd`);
         let list = res.data;
 
         if (Array.isArray(list) && list.length && typeof list[0] === "object") {
@@ -97,7 +99,7 @@ export default function EditAppelModal({ isOpen, onClose, appel, onSaved }) {
 
     try {
       setSaving(true);
-      const res = await axios.put(`${API}/journalappels/${IDAppel}`, payload);
+      const res = await api.put(`${API}/journalappels/${IDAppel}`, payload);
       if (res.status >= 200 && res.status < 300) {
         onSaved?.({ ...appel, ...payload });
         onClose?.();

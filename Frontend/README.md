@@ -92,7 +92,7 @@ Argon Dashboard React
 ├── README.md
 ├── package.json
 ├── public
-│   ├── favicon.ico
+│   ├── favicons.ico
 │   ├── index.html
 │   └── manifest.json
 └── src

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import api from "api";
 
 export default function useAppelsAApellerData() {
   const [data, setData] = useState([]);        // data brute
@@ -24,7 +24,9 @@ export default function useAppelsAApellerData() {
       try {
         setLoading(true);
         setError("");
-        const res = await axios.get("http://localhost:5000/api/journalappels/aapeller");
+        //        const res = await api.get("http://localhost:5000/api/journalappels/aapeller");
+
+        const res = await api.get("/api/journalappels/aapeller");
         setData(Array.isArray(res.data) ? res.data : []);
       } catch (e) {
         console.error(e);

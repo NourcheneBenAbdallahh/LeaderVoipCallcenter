@@ -7,7 +7,7 @@ import ClientPagination from "../clients/ClientPaginationComponent.jsx";
 import useAppelsAApellerData from "./hooks/useAppelsAApellerData.jsx";
 import AffectationControls from "../affectationAppel/AffectationControls.jsx";
 import AffectationFiltersDrawer from "../affectationAppel/AffectationFiltersDrawer.jsx";
-import axios from "axios";
+import api from "api";
 import AffectationTable from "./AffectationTable.jsx";
 import EditAppelModal from "../affectationAppel/Editaffectation/EditAppelModal.jsx";
 
@@ -36,7 +36,9 @@ const AppelsAffectation = () => {
   let alive = true;
   (async () => {
     try {
-      const { data } = await axios.get("http://localhost:5000/api/agents");
+      //      const { data } = await api.get("http://localhost:5000/api/agents");
+      const { data } = await api.get("/api/agents");
+
 
       const raw = Array.isArray(data?.agents)
         ? data.agents
@@ -78,7 +80,9 @@ const AppelsAffectation = () => {
     let alive = true;
     (async () => {
       try {
-        const res = await axios.get("http://localhost:5000/api/clients");
+        //        const res = await api.get("http://localhost:5000/api/clients");
+
+        const res = await api.get("/api/clients");
         const list = (Array.isArray(res.data) ? res.data : [])
           .map(c => ({
             id: c.IDClient ?? c.id,

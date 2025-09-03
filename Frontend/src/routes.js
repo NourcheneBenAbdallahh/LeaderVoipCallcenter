@@ -9,8 +9,8 @@ import AppelsAffectation from "views/affectationAppel/AppelsAffectation";
 
 var routes = [
   {
-    path: "/index",
-    name: "Dashboard",
+    path: "/Dashboard",
+  name: `Dashboard`,
     icon: "ni ni-tv-2 text-primary",
     component: <Index />,
     layout: "/admin",

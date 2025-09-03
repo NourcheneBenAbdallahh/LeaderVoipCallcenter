@@ -1,5 +1,5 @@
 import  pool  from "../../../config/db.js";
-
+import db from "../../../config/db.js";
 // Vérifie si un agent existe
 export async function findAgentById(idAgent) {
   const [rows] = await pool.query("SELECT * FROM Agent WHERE IDAgent_Emmission = ?", [idAgent]);
@@ -27,7 +27,6 @@ export async function creerAppel({ idClient, idAgent, typeAgent, date, commentai
   const heure = now.toTimeString().split(" ")[0];
   const dateSQL = date ? new Date(date).toISOString().split("T")[0] : now.toISOString().split("T")[0];
 
-  // Insérer l'appel
   const sql = `
     INSERT INTO Appel (
       Date, Heure, Type_Appel, Duree_Appel, Commentaire, Numero,
@@ -66,7 +65,6 @@ console.log("Client récupéré :", client);
 export async function getDerniersAppels(limit = 10) {
   const lim = Number(limit) > 0 ? Number(limit) : 10;
 
-  // Si vous avez une colonne datetime (ex: CreatedAt), préférez ORDER BY CreatedAt DESC
   const sql = `
     SELECT 
       IDAppel, Date, Heure, Type_Appel, Duree_Appel, Numero, IDClient, Sous_Statut
@@ -78,6 +76,6 @@ export async function getDerniersAppels(limit = 10) {
     LIMIT ?
   `;
 
-  const [rows] = await pool.query(sql, [lim]);
+const [rows] = await pool.query(sql, [lim]);
   return rows;
 }

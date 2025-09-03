@@ -24,6 +24,15 @@ const Header = ({
       <div className="header bg-gradient-info pb-8 pt-5 pt-md-8">
         <Container fluid>
           <div className="header-body">
+            {/* ---- Titre personnalisé ---- */}
+            <Row className="mb-4">
+              <Col>
+                <h2 className="text-white">
+                  {`Bienvenue dans la plateforme ${localStorage.getItem("region") ?? ""}`}
+                </h2>
+              </Col>
+            </Row>
+
             <Row>
               {/* ---- Card 1 ---- */}
               <Col lg="6" xl="3">

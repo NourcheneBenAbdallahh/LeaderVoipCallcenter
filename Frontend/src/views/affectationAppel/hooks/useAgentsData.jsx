@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
+import api from "api";
 
 export const useAgentsData = () => {
   const [agents, setAgents] = useState([]);
@@ -10,8 +10,9 @@ export const useAgentsData = () => {
     try {
       setLoading(true);
       setError(null);
+//      const res = await api.get("http://localhost:5000/api/agents");
 
-      const res = await axios.get("http://localhost:5000/api/agents");
+      const res = await api.get("/api/agents");
 
       const formatted = res.data.map((a) => ({
         id: a.IDAgent_Emmission,

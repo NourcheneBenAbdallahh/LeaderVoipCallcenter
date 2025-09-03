@@ -1,8 +1,8 @@
-// Charger .env au tout début de l'ENTRYPOINT aussi (safe)
+// index.js
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import pool, { initDB } from "./src/config/db.js";
+import { initDB, regionMiddleware } from "./src/config/db.js";
 
 import agentRoutes from "./src/modules/agent/routes/agentRoutes.js";
 import clientRoutes from "./src/modules/client/routes/clientRoutes.js";
@@ -14,11 +14,18 @@ import authRoutes from "./src/modules/auth/routes/authRoutes.js";
 
 const app = express();
 app.use(cors());
+
+app.use(regionMiddleware);     
+
 app.use(express.json());
+// ...
 
+
+// Tests rapides
 app.get("/test", (_req, res) => res.send("✅ Serveur OK"));
+app.get("/api/health", (req, res) => res.json({ ok: true, region: req.region }));
 
-// Routes API
+// Routes API (⚠️ elles doivent utiliser pool à l'intérieur)
 app.use("/api", agentRoutes);
 app.use("/api", agentReceptionRoutes);
 app.use("/api", clientRoutes);
@@ -31,9 +38,9 @@ const PORT = Number(process.env.PORT || 5000);
 
 (async () => {
   try {
-    await initDB({ retries: 3, delayMs: 1000 });
+    await initDB(); // ping des 3 pools configurés
   } catch (e) {
-    console.error("🚫 Impossible de se connecter à la DB après retries. Le serveur HTTP démarre quand même.");
+    console.error("🚫 initDB a des erreurs (certaines régions peuvent être KO). Le serveur démarre quand même.");
   }
 
   app.listen(PORT, "0.0.0.0", () => {

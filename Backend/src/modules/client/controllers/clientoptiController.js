@@ -2,7 +2,7 @@
 import {
   findClientsPaginated,
   countFilteredClients,
-} from "../services/clientoptiService";
+} from "../services/clientoptiService.js"; 
 
 /**
  * GET /api/clients

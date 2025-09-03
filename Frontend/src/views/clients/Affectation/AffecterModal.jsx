@@ -4,9 +4,10 @@ import {
   Modal, ModalHeader, ModalBody, ModalFooter,
   Button, Row, Col, FormGroup, Label, Input, Spinner
 } from "reactstrap";
-import axios from "axios";
+import api from "api";
+//const API = "http://localhost:5000/api";
 
-const API = "http://localhost:5000/api";
+const API = "/api";
 
 export default function AffecterModal({
   isOpen,
@@ -51,7 +52,7 @@ export default function AffecterModal({
         const endpoint =
           typeAgent === "reception" ? `${API}/agentsReception` : `${API}/agents`;
 
-        const { data } = await axios.get(endpoint);
+        const { data } = await api.get(endpoint);
 
         const raw = Array.isArray(data?.agents)
           ? data.agents
@@ -118,7 +119,7 @@ export default function AffecterModal({
 
     try {
       setSubmitting(true);
-      await axios.post(`${API}/journalappels/affecter`, {
+      await api.post(`${API}/journalappels/affecter`, {
         idClient: Number(idClient),
         idAgent: Number(idAgent),
         typeAgent, // "emission" ou "reception"

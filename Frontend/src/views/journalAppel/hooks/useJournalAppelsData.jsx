@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import axios from "axios";
+import api from "api";
 import { formatDuration } from "../utils/time";
 
 const DEFAULT_LIMIT = 20;
+//const API = "http://localhost:5000/api";
+
+const API = "/api";
 
 const DEFAULT_FILTERS = {
   IDAgent_Reception: "",
@@ -13,30 +16,25 @@ const DEFAULT_FILTERS = {
   dateFrom: "",
   dateTo: "",
   IDClient: "",
-  q: "", // recherche globale optionnelle
+  q: "",
 };
 
-const FILTERS_KEY = "journalAppels.filters.v1";
-const PARAMS_KEY  = "journalAppels.params.v1";
+const FILTERS_KEY = "journalAppels.filters.v2";
+const PARAMS_KEY  = "journalAppels.params.v2";
 
+// util pour convertir mm:ss/hh:mm:ss vers secondes si tu veux afficher un avg local propre
 const parseDurationToSeconds = (v) => {
   if (v == null) return 0;
-  if (!isNaN(v)) return Number(v) || 0; // déjà en secondes
+  if (!isNaN(v)) return Number(v) || 0;
   const parts = String(v).split(":").map(n => Number(n) || 0);
-  if (parts.length === 3) {
-    const [h,m,s] = parts;
-    return h*3600 + m*60 + s;
-  }
-  if (parts.length === 2) {
-    const [m,s] = parts;
-    return m*60 + s;
-  }
+  if (parts.length === 3) { const [h,m,s]=parts; return h*3600 + m*60 + s; }
+  if (parts.length === 2) { const [m,s]=parts;  return m*60 + s; }
   return 0;
 };
 
 export function useJournalAppelsData() {
-  // on garde TOUT en mémoire et on pagine localement (slice)
-  const [allRows, setAllRows] = useState([]);
+  // jeu de la page courante uniquement
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // pagination & tri (persistés)
@@ -58,6 +56,8 @@ export function useJournalAppelsData() {
     } catch { return DEFAULT_FILTERS; }
   });
 
+  const [total, setTotal] = useState(0);
+
   // persistance
   useEffect(() => {
     localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
@@ -67,197 +67,92 @@ export function useJournalAppelsData() {
     localStorage.setItem(PARAMS_KEY, JSON.stringify({ page, sortBy, sortDir }));
   }, [page, sortBy, sortDir]);
 
-  // ======= FETCH: une seule requête, sans pagination serveur =======
+  // FETCH (pagination serveur)
   const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-const res = await axios.get("http://localhost:5000/api/appelsselect?limit=300");
-      const arr = Array.isArray(res.data) ? res.data : (res.data.rows || []);
-      setAllRows(arr || []);
+      const params = {
+        page,
+        limit,
+        sortBy,
+        sortDir,
+        IDAgent_Reception: filters.IDAgent_Reception || undefined,
+        IDAgent_Emmission: filters.IDAgent_Emmission || undefined,
+        IDClient: filters.IDClient || undefined,
+        dateFrom: filters.dateFrom || undefined,
+        dateTo: filters.dateTo || undefined,
+        dureeMin: filters.dureeMin || undefined,
+        dureeMax: filters.dureeMax || undefined,
+        q: filters.q || undefined,
+        // Sous_Statut: envoyé en CSV
+        Sous_Statut: (filters.Sous_Statut && filters.Sous_Statut.length)
+          ? filters.Sous_Statut.join(",")
+          : undefined,
+      };
+
+      const res = await api.get(`${API}/journalappels/opti`, { params });
+      const { rows: data, total: t } = res.data || {};
+      setRows(Array.isArray(data) ? data : []);
+      setTotal(Number(t) || 0);
     } catch (e) {
-      console.error("Erreur chargement appels:", e);
-      setAllRows([]);
+      console.error("Erreur chargement appels (opti):", e);
+      setRows([]);
+      setTotal(0);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit, sortBy, sortDir, filters]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-
-
-  // ======= FILTRAGE côté client =======
-  const filtered = useMemo(() => {
-    const {
-      IDAgent_Reception, IDAgent_Emmission, Sous_Statut,
-      dureeMin, dureeMax, dateFrom, dateTo, IDClient, q
-    } = filters;
-
-    const ql = (q || "").toLowerCase().trim();
-
-    return allRows.filter((r) => {
-      // IDAgent Réception
-      if (IDAgent_Reception && String(r.IDAgent_Reception) !== String(IDAgent_Reception)) return false;
-      // IDAgent Emmission
-      if (IDAgent_Emmission && String(r.IDAgent_Emmission) !== String(IDAgent_Emmission)) return false;
-      // Sous Statut (liste)
-      if (Array.isArray(Sous_Statut) && Sous_Statut.length && !Sous_Statut.includes(r.Sous_Statut)) return false;
-      // Durée
-      if (dureeMin && Number(r.Duree_Appel) < Number(dureeMin)) return false;
-      if (dureeMax && Number(r.Duree_Appel) > Number(dureeMax)) return false;
-      // Date (on compare sur la partie date uniquement)
-  const getLocalDateOnly = (dateStr) => {
-  const date = new Date(dateStr);
-  const tzDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return tzDate.toISOString().slice(0, 10);
-};
-
-const localDate = getLocalDateOnly(r.Date);
-if (dateFrom && localDate < dateFrom) return false;
-if (dateTo && localDate > dateTo) return false;
-
-      // Client
-      if (IDClient && String(r.IDClient) !== String(IDClient)) return false;
-      // Recherche globale
-      if (ql) {
-        const hay = [
-          r.IDAppel, r.Date, r.Heure, r.Type_Appel, r.Duree_Appel, r.Commentaire,
-          r.Numero, r.IDClient, r.IDAgent_Reception, r.IDAgent_Emmission, r.Sous_Statut
-        ].map(v => (v == null ? "" : String(v).toLowerCase())).join(" ");
-        if (!hay.includes(ql)) return false;
-      }
-      return true;
-    });
-  }, [allRows, filters]);
-
-  // ======= TRI côté client =======
-  const sorted = useMemo(() => {
-    const arr = [...filtered];
-    const dir = sortDir === "ASC" ? 1 : -1;
-
-    const getVal = (row) => {
-      switch (sortBy) {
-        case "IDAppel":
-        case "IDClient":
-        case "IDAgent_Reception":
-        case "IDAgent_Emmission":
-        case "Duree_Appel":
-        case "Type_Appel":
-          return Number(row[sortBy]) || 0;
-        case "Date":
-          return row.Date ? new Date(row.Date).getTime() : 0;
-        default:
-          return (row[sortBy] ?? "").toString().toLowerCase();
-      }
-    };
-
-    arr.sort((a, b) => {
-      const va = getVal(a);
-      const vb = getVal(b);
-      if (va < vb) return -1 * dir;
-      if (va > vb) return  1 * dir;
-      return 0;
-    });
-
-    return arr;
-  }, [filtered, sortBy, sortDir]);
-
-  // ======= Dernier appel =======
-  const dernierAppel = useMemo(() => {
-    if (!sorted.length) return null;
-    return sorted.reduce((latest, r) => {
-      const time = new Date(r.Date + " " + (r.Heure || "00:00")).getTime();
-      const latestTime = new Date(latest.Date + " " + (latest.Heure || "00:00")).getTime();
-      return time > latestTime ? r : latest;
-    }, sorted[0]);
-  }, [sorted]);
-
-  // ======= PAGINATION locale (slice) =======
-  const total = sorted.length;
-  const indexOfLast = page * limit;
-  const indexOfFirst = indexOfLast - limit;
-  const paginatedRows = sorted.slice(indexOfFirst, indexOfLast);
 
   // actions
   const applyFilters = (next) => {
     setFilters(next);
-    // seulement remettre à 1 si les filtres changent vraiment
-    if (JSON.stringify(next) !== JSON.stringify(filters)) {
-      setPage(1);
-      localStorage.setItem(PARAMS_KEY, JSON.stringify({ page: 1, sortBy, sortDir }));
-    }
-    localStorage.setItem(FILTERS_KEY, JSON.stringify(next));
+    setPage(1); // on revient en page 1 sur changement de filtres
   };
-
   const clearOneFilter = (key) => {
     const next = { ...filters };
     if (key === "Sous_Statut") next.Sous_Statut = [];
     else next[key] = "";
     applyFilters(next);
   };
-
   const resetAll = () => {
     setFilters(DEFAULT_FILTERS);
     setPage(1);
     localStorage.removeItem(FILTERS_KEY);
     localStorage.setItem(PARAMS_KEY, JSON.stringify({ page: 1, sortBy: "Date", sortDir: "DESC" }));
   };
-
   const handleSort = (col) => {
     if (sortBy === col) setSortDir((d) => (d === "ASC" ? "DESC" : "ASC"));
     else { setSortBy(col); setSortDir("ASC"); }
     setPage(1);
   };
 
-  // ======= Durée moyenne (sur le jeu filtré) =======
+  // Infos calculées (sur la page courante uniquement)
   const avgDurationSec = useMemo(() => {
-    if (!filtered.length) return 0;
-    const sum = filtered.reduce(
-      (acc, r) => acc + parseDurationToSeconds(r.Duree_Appel),
-      0
-    );
-    return Math.round(sum / filtered.length); // arrondi à la seconde
-  }, [filtered]);
-
+    if (!rows.length) return 0;
+    const sum = rows.reduce((acc, r) => acc + parseDurationToSeconds(r.Duree_Appel), 0);
+    return Math.round(sum / rows.length);
+  }, [rows]);
   const avgDurationLabel = formatDuration(avgDurationSec);
 
-  // ======= Total "TRAITE" (performance) sur tout le filtré =======
   const totalTraites = useMemo(() => {
-    return filtered.filter(r => {
-      const s = (r.Sous_Statut ?? "").toString().trim().toUpperCase();
-      return s === "TRAITE";
-    }).length;
-  }, [filtered]);
+    return rows.filter(r => (r.Sous_Statut ?? "").toString().trim().toUpperCase() === "TRAITE").length;
+  }, [rows]);
 
-
-  const today = new Date().toISOString().slice(0, 10); // format YYYY-MM-DD
-
-const appelsAujourdHui = useMemo(() => {
-  return allRows.filter(
-    (appel) => appel.Date && appel.Date.startsWith(today)
-  ).length;
-}, [allRows, today]);
-
-
-
-
+  // compteur "aujourd'hui" (si tu veux du global, fais un endpoint count)
+  const today = new Date().toISOString().slice(0, 10);
+  const appelsAujourdHui = useMemo(() => {
+    return rows.filter(a => a.Date && String(a.Date).startsWith(today)).length;
+  }, [rows, today]);
 
   return {
-    rows: paginatedRows,   // pour le tableau
-    total,                 // pour la pagination
-    loading,
-grandTotal: allRows.length,
-    // états/params
+    rows, loading,
+    total,       // total filtré (serveur)
     page, limit, sortBy, sortDir, filters,
+    avgDurationLabel, avgDurationSec,
+    totalTraites, appelsAujourdHui,
 
-    // infos calculées
-    dernierAppel,
-    avgDurationLabel,
-    avgDurationSec,
-    totalTraites,
-appelsAujourdHui,
-    // actions
     setPage, applyFilters, clearOneFilter, resetAll, handleSort,
-
-
   };
 }

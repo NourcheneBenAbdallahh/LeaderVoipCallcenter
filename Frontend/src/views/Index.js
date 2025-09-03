@@ -61,7 +61,9 @@ export default function Index() {
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch(`http://localhost:5000/api/recents?limit=10`, { signal: ac.signal });
+        // const res = await fetch(`http://localhost:5000/api/recents?limit=10`, { signal: ac.signal });
+
+        const res = await fetch(`/api/recents?limit=10`, { signal: ac.signal });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setRows(Array.isArray(data) ? data : []);

@@ -10,6 +10,8 @@ import { affecter ,
 
 import { getAppelsAujourdHui, getAppelsHier } from "../controllers/countappelController.js";
 
+import { getJournalAppelsOpti, getJournalAppelsAggregatesController } from "../controllers/appeloptiController.js";
+
 const router = express.Router();
 
 router.get("/appels", getAllAppels);
@@ -35,5 +37,10 @@ router.get("/count-yesterday", getAppelsHier);
 
 //dashbor  Get /api/recents
 router.get("/recents", getDerniersAppelsController);
+
+
+//VersionOptimisé
+router.get("/journalappels/opti", getJournalAppelsOpti);
+router.get("/journalappels/opti/aggregates", getJournalAppelsAggregatesController);
 
 export default router;

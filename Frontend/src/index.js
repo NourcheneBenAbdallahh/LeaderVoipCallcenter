@@ -1,20 +1,3 @@
-/*!
-
-=========================================================
-* Argon Dashboard React - v1.2.4
-=========================================================
-
-* Product Page: https://www.creative-tim.com/product/argon-dashboard-react
-* Copyright 2024 Creative Tim (https://www.creative-tim.com)
-* Licensed under MIT (https://github.com/creativetimofficial/argon-dashboard-react/blob/master/LICENSE.md)
-
-* Coded by Creative Tim
-
-=========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-*/
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
@@ -31,18 +14,83 @@ import AgentsReception from "views/agentsreceptions/AgentsReception";
 import Agents from "views/agents/agent";
 import Clients from "views/clients/client";
 
+import RequireAuth from "views/login/RequireAuth";
+import URLMask from "utils/URLMask";
+import RequireRegion from "views/login/RequireRegion";
+import RegionSelect from "views/Region/RegionSelect";
+
+const Start = () => {
+  const hasRegion = !!localStorage.getItem("region");
+  return <Navigate to={hasRegion ? "/auth/login" : "/select-region"} replace />;
+};
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
   <BrowserRouter>
-    <Routes>
-      <Route path="/admin/*" element={<AdminLayout />} />
-      <Route path="/auth/*" element={<AuthLayout />} />
-      <Route path="*" element={<Navigate to="/auth/login" replace />} />
-      <Route path="/agents-reception" element={<AgentsReception />} />
-      <Route path="/agents" element={<Agents />} />
-      <Route path="/clients" element={<Clients />} />
+    {/* URL visible figée
+    /leaderVoipSupport */}
+    <URLMask fixed="/" />
 
+    <Routes>
+      {/* Sélection de région */}
+      <Route path="/select-region" element={<RegionSelect />} />
+
+      {/* Publique (nécessite région) */}
+      <Route
+        path="/auth/*"
+        element={
+          <RequireRegion>
+            <AuthLayout />
+          </RequireRegion>
+        }
+      />
+
+      {/* Protégées (auth + région) */}
+      <Route
+        path="/admin/*"
+        element={
+          <RequireRegion>
+            <RequireAuth>
+              <AdminLayout />
+            </RequireAuth>
+          </RequireRegion>
+        }
+      />
+      <Route
+        path="/agents-reception"
+        element={
+          <RequireRegion>
+            <RequireAuth>
+              <AgentsReception />
+            </RequireAuth>
+          </RequireRegion>
+        }
+      />
+      <Route
+        path="/agents"
+        element={
+          <RequireRegion>
+            <RequireAuth>
+              <Agents />
+            </RequireAuth>
+          </RequireRegion>
+        }
+      />
+      <Route
+        path="/clients"
+        element={
+          <RequireRegion>
+            <RequireAuth>
+              <Clients />
+            </RequireAuth>
+          </RequireRegion>
+        }
+      />
+
+      {/* Démarrage & fallback */}
+      <Route path="/" element={<Start />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   </BrowserRouter>
 );

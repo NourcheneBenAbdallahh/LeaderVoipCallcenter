@@ -5,7 +5,6 @@ export async function findAllAgents() {
     const [rows] = await pool.query("SELECT * FROM Agent");
     const [rows2] = await pool.query("SELECT * FROM Agent_Reception");
 
-       // Comptage actifs / inactifs
     const [countRows] = await pool.query(`
       SELECT 
         SUM(CASE WHEN Etat_Compte = 1 THEN 1 ELSE 0 END) AS actifs,

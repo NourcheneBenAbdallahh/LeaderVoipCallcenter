@@ -38,53 +38,65 @@ function getPaging({ page = 1, limit = 20 }) {
 
 /**
  * Retourne la liste paginée + total selon filtres.
- */
+ */// ...
 export async function findClientsPaginated(params = {}) {
-  const { page, limit, offset } = getPaging(params);
-  const { emiMin, emiMax, recMin, recMax } = normalizeRanges(params);
+  const { page = 1, limit = 20 } = params;
+  const p = Math.max(1, parseInt(page, 10) || 1);
+  const L = Math.min(200, Math.max(1, parseInt(limit, 10) || 20));
+  const offset = (p - 1) * L;
+
+  const toInt = (v, d) => (Number.isFinite(parseInt(v, 10)) ? parseInt(v, 10) : d);
+  const emiMin = toInt(params.appelsEmisMin, 0);
+  const emiMax = toInt(params.appelsEmisMax, 1_000_000);
+  const recMin = toInt(params.appelsRecusMin, 0);
+  const recMax = toInt(params.appelsRecusMax, 1_000_000);
 
   try {
+    // ✅ Inclure les NULL côté liste
     const [rows] = await pool.query(
       `
       SELECT *
       FROM Client
-      WHERE NB_appel_Emis BETWEEN ? AND ?
-        AND NB_Appel_Recu BETWEEN ? AND ?
+      WHERE (NB_appel_Emis BETWEEN ? AND ? OR NB_appel_Emis IS NULL)
+        AND (NB_Appel_Recu BETWEEN ? AND ? OR NB_Appel_Recu IS NULL)
       ORDER BY IDClient ASC
       LIMIT ? OFFSET ?
       `,
-      [emiMin, emiMax, recMin, recMax, limit, offset]
+      [emiMin, emiMax, recMin, recMax, L, offset]
     );
 
+    // ✅ Inclure les NULL côté COUNT
     const [[{ total }]] = await pool.query(
       `
       SELECT COUNT(*) AS total
       FROM Client
-      WHERE NB_appel_Emis BETWEEN ? AND ?
-        AND NB_Appel_Recu BETWEEN ? AND ?
+      WHERE (NB_appel_Emis BETWEEN ? AND ? OR NB_appel_Emis IS NULL)
+        AND (NB_Appel_Recu BETWEEN ? AND ? OR NB_Appel_Recu IS NULL)
       `,
       [emiMin, emiMax, recMin, recMax]
     );
 
-    return { data: rows, total, page, limit };
+    return { data: rows, total, page: p, limit: L };
   } catch (error) {
     console.error("Erreur SQL (findClientsPaginated) :", error);
     throw error;
   }
 }
 
-/**
- * Compte uniquement (utile si besoin séparé)
- */
 export async function countFilteredClients(params = {}) {
-  const { emiMin, emiMax, recMin, recMax } = normalizeRanges(params);
+  const toInt = (v, d) => (Number.isFinite(parseInt(v, 10)) ? parseInt(v, 10) : d);
+  const emiMin = toInt(params.appelsEmisMin, 0);
+  const emiMax = toInt(params.appelsEmisMax, 1_000_000);
+  const recMin = toInt(params.appelsRecusMin, 0);
+  const recMax = toInt(params.appelsRecusMax, 1_000_000);
+
   try {
     const [[{ total }]] = await pool.query(
       `
       SELECT COUNT(*) AS total
       FROM Client
-      WHERE NB_appel_Emis BETWEEN ? AND ?
-        AND NB_Appel_Recu BETWEEN ? AND ?
+      WHERE (NB_appel_Emis BETWEEN ? AND ? OR NB_appel_Emis IS NULL)
+        AND (NB_Appel_Recu BETWEEN ? AND ? OR NB_Appel_Recu IS NULL)
       `,
       [emiMin, emiMax, recMin, recMax]
     );

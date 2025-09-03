@@ -1,6 +1,6 @@
 // src/views/agentsReception/AgentsReception.jsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import axios from "axios";
+import api from "api";
 import {
   Container, Row, Col, Card, CardHeader, CardBody, Spinner
 } from "reactstrap";
@@ -32,8 +32,10 @@ const AgentsReception = () => {
   const rowRef = useRef(null);
 
 useEffect(() => {
-  axios
-    .get("http://localhost:5000/api/agentsReception")
+  api
+  //    .get("http://localhost:5000/api/agentsReception")
+
+    .get("/api/agentsReception")
     .then((res) => {
       const data = res.data;
       console.log(data);

@@ -1,7 +1,7 @@
 // src/views/journalAppel/FiltersDrawer.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Drawer from "react-modern-drawer";
-import axios from "axios";
+import api from "api";
 import {
   Row, Col, Input, Label, Button, FormGroup, Spinner
 } from "reactstrap";
@@ -47,8 +47,9 @@ const FiltersDrawer = ({ isOpen, toggle, value, onApply }) => {
       try {
         setSsLoading(true);
         setSsError("");
+//        const res = await api.get("http://localhost:5000/api/sous_statuts_sauf_aapellername");
 
-        const res = await axios.get("http://localhost:5000/api/sous_statuts_sauf_aapellername");
+        const res = await api.get("/api/sous_statuts_sauf_aapellername");
         let list = res.data;
 
         // tolérance sur le format de la réponse
