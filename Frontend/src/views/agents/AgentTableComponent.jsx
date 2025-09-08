@@ -19,7 +19,6 @@ const AgentTable = ({ agents, highlightId, rowRef }) => {
     <Table className="align-middle table-flush" responsive hover>
       <thead style={{ backgroundColor: "#e0f0ff" }}>
         <tr className="bg-gray-100">
-          <th>ID</th>
           <th>Nom</th>
           <th>Prénom</th>
           <th>Login</th>
@@ -40,7 +39,6 @@ const AgentTable = ({ agents, highlightId, rowRef }) => {
               ref={isHighlight ? rowRef : null}
               style={isHighlight ? { backgroundColor: "#fff8d5" } : undefined}
             >
-              <td>{agent.IDAgent_Emmission}</td>
               <td>{agent.Nom || "—"}</td>
               <td>{agent.Prenom || "—"}</td>
               <td>{agent.Login || "—"}</td>

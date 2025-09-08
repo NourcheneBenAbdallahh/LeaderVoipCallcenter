@@ -34,7 +34,7 @@ const AdminNavbar = (props) => {
   //logout
   const handleLogout = () => {
   localStorage.removeItem("token"); // suppr le token
-  window.location.href = "/auth/login"; 
+  window.location.href = "/select-region"; 
 };
 
   return (

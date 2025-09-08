@@ -1,5 +1,4 @@
 import React from "react";
-import { FaClipboard } from "react-icons/fa";
 import { Table, Button, Badge } from "reactstrap";
 
 
@@ -28,7 +27,6 @@ const ClientTable = ({
 </th>
 
          {[
-          "IDClient",
           "Nom",
           "Prenom",
           "Adresse",
@@ -72,7 +70,6 @@ const ClientTable = ({
             onChange={(e) => onSelectClient(client.IDClient, e.target.checked)}
           />
         </td>
-        <td className="px-4 py-2">{client.IDClient || "—"}</td>
         <td className="px-4 py-2">{client.Nom || "—"}</td>
         <td className="px-4 py-2">{client.Prenom || "—"}</td>
         <td className="px-4 py-2">{client.Adresse || "—"}</td>

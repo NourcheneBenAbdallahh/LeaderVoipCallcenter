@@ -1,5 +1,6 @@
 import express from "express";
 import { getAllClients ,getFilteredClients } from "../controllers/clientControllers.js";
+//import { getClientsOpti } from "../controllers/clientsOptiController.js";
 
 const router = express.Router();
 
@@ -18,4 +19,6 @@ import {
 router.get("/clientsopti", getClients);
 router.post("/clientsopti/filter", filterClients);
 router.get("/clientsopti/count", getClientsCount);
+
+
 export default router;

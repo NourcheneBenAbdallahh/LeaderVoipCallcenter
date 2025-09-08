@@ -1,12 +1,3 @@
-/*!=========================================================
-* Argon Dashboard React - v1.2.4
-==========================================================
-* Product Page: https://www.creative-tim.com/product/argon-dashboard-react
-* Copyright 2024 Creative Tim
-* Licensed under MIT
-* Coded by Creative Tim
-==========================================================
-*/
 
 import React from "react";
 import { useLocation, Route, Routes, Navigate } from "react-router-dom";
@@ -57,9 +48,7 @@ const Auth = (props) => {
               <Row className="justify-content-center">
                 <Col lg="5" md="6">
                   <h1 className="text-white">Bienvenue!</h1>
-                  <p className="text-lead text-light">
-                  TestLocall
-                  </p>
+              
                 </Col>
               </Row>
             </div>

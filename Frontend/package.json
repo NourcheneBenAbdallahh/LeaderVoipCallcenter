@@ -23,7 +23,7 @@
     "url": "https://github.com/creativetimofficial/argon-dashboard-react/issues"
   },
   "homepage": "https://demos.creative-tim.com/argon-dashboard-react/",
-      "proxy": "http://192.168.1.140:5000",
+      "proxy": "http://192.168.1.146:5000",
 
   "scripts": {
     "start": "react-scripts start",

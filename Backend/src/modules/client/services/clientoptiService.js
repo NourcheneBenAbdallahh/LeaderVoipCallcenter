@@ -1,79 +1,94 @@
-import  pool  from "../../../config/db.js";
+import pool from "../../../config/db.js";
 
+function buildWhere({ emiMin, emiMax, recMin, recMax, q }) {
+  const where = [];
+  const params = [];
 
-/**
- * Normalise et sécurise les bornes numériques
- */
-function normalizeRanges({
-  appelsEmisMin = 0,
-  appelsEmisMax = 1_000_000,
-  appelsRecusMin = 0,
-  appelsRecusMax = 1_000_000,
-}) {
-  const toInt = (v, d) => {
-    const n = parseInt(v, 10);
-    return Number.isFinite(n) ? n : d;
-  };
+  // Conditions pour les appels émis
+  if (emiMin !== 0 || emiMax !== 1000000) {
+    // Si les filtres ne sont pas les valeurs par défaut, exclure les NULL
+    where.push("(NB_appel_Emis BETWEEN ? AND ?)");
+    params.push(emiMin, emiMax);
+  } else {
+    // Si les filtres sont les valeurs par défaut, inclure aussi les NULL
+    where.push("(NB_appel_Emis BETWEEN ? AND ? OR NB_appel_Emis IS NULL)");
+    params.push(emiMin, emiMax);
+  }
 
-  let emiMin = toInt(appelsEmisMin, 0);
-  let emiMax = toInt(appelsEmisMax, 1_000_000);
-  let recMin = toInt(appelsRecusMin, 0);
-  let recMax = toInt(appelsRecusMax, 1_000_000);
+  // Conditions pour les appels reçus
+  if (recMin !== 0 || recMax !== 1000000) {
+    // Si les filtres ne sont pas les valeurs par défaut, exclure les NULL
+    where.push("(NB_Appel_Recu BETWEEN ? AND ?)");
+    params.push(recMin, recMax);
+  } else {
+    // Si les filtres sont les valeurs par défaut, inclure aussi les NULL
+    where.push("(NB_Appel_Recu BETWEEN ? AND ? OR NB_Appel_Recu IS NULL)");
+    params.push(recMin, recMax);
+  }
 
-  if (emiMin > emiMax) [emiMin, emiMax] = [emiMax, emiMin];
-  if (recMin > recMax) [recMin, recMax] = [recMax, recMin];
+  if (q && q.trim()) {
+    where.push(`(
+      CAST(IDClient AS CHAR) LIKE ? OR
+      Nom LIKE ? OR
+      Prenom LIKE ? OR
+      Telephone LIKE ? OR
+      Email LIKE ? OR
+      Adresse LIKE ? OR
+      Ville LIKE ? OR
+      CodePostal LIKE ? OR
+      Sous_Statut LIKE ? OR
+      CONCAT(Prenom, ' ', Nom) LIKE ? OR
+      CONCAT(Nom, ' ', Prenom) LIKE ?
+    )`);
+    const like = `%${q.trim()}%`;
+    // Ajoute 11 paramètres pour chaque placeholder
+    for (let i = 0; i < 11; i++) {
+      params.push(like);
+    }
+  }
 
-  return { emiMin, emiMax, recMin, recMax };
+  return { whereSql: where.length > 0 ? `WHERE ${where.join(" AND ")}` : "", params };
 }
 
-/**
- * Calcule offset/limit (limite max protectrice)
- */
-function getPaging({ page = 1, limit = 20 }) {
-  const p = Math.max(1, parseInt(page, 10) || 1);
-  const L = Math.min(200, Math.max(1, parseInt(limit, 10) || 20)); // hard cap 200
-  const offset = (p - 1) * L;
-  return { page: p, limit: L, offset };
-}
-
-/**
- * Retourne la liste paginée + total selon filtres.
- */// ...
 export async function findClientsPaginated(params = {}) {
-  const { page = 1, limit = 20 } = params;
-  const p = Math.max(1, parseInt(page, 10) || 1);
-  const L = Math.min(200, Math.max(1, parseInt(limit, 10) || 20));
+  const toInt = (v, d) => (Number.isFinite(parseInt(v, 10)) ? parseInt(v, 10) : d);
+
+  const p = Math.max(1, toInt(params.page, 1));
+  const L = Math.min(200, Math.max(1, toInt(params.limit, 20)));
   const offset = (p - 1) * L;
 
-  const toInt = (v, d) => (Number.isFinite(parseInt(v, 10)) ? parseInt(v, 10) : d);
-  const emiMin = toInt(params.appelsEmisMin, 0);
-  const emiMax = toInt(params.appelsEmisMax, 1_000_000);
-  const recMin = toInt(params.appelsRecusMin, 0);
-  const recMax = toInt(params.appelsRecusMax, 1_000_000);
+  // Utilise les valeurs par défaut seulement si non spécifiées
+  const emiMin = params.appelsEmisMin !== undefined ? toInt(params.appelsEmisMin, 0) : 0;
+  const emiMax = params.appelsEmisMax !== undefined ? toInt(params.appelsEmisMax, 1000000) : 1000000;
+  const recMin = params.appelsRecusMin !== undefined ? toInt(params.appelsRecusMin, 0) : 0;
+  const recMax = params.appelsRecusMax !== undefined ? toInt(params.appelsRecusMax, 1000000) : 1000000;
+  const q = params.q || params.search || "";
 
   try {
-    // ✅ Inclure les NULL côté liste
+    const { whereSql, params: whereParams } = buildWhere({ emiMin, emiMax, recMin, recMax, q });
+
     const [rows] = await pool.query(
       `
-      SELECT *
+      SELECT
+        IDClient, Nom, Prenom, Telephone, Email,
+        Adresse, CodePostal, Ville,
+        NB_appel_Emis, NB_Appel_Recu,
+        Sous_Statut
       FROM Client
-      WHERE (NB_appel_Emis BETWEEN ? AND ? OR NB_appel_Emis IS NULL)
-        AND (NB_Appel_Recu BETWEEN ? AND ? OR NB_Appel_Recu IS NULL)
+      ${whereSql}
       ORDER BY IDClient ASC
       LIMIT ? OFFSET ?
       `,
-      [emiMin, emiMax, recMin, recMax, L, offset]
+      [...whereParams, L, offset]
     );
 
-    // ✅ Inclure les NULL côté COUNT
     const [[{ total }]] = await pool.query(
       `
       SELECT COUNT(*) AS total
       FROM Client
-      WHERE (NB_appel_Emis BETWEEN ? AND ? OR NB_appel_Emis IS NULL)
-        AND (NB_Appel_Recu BETWEEN ? AND ? OR NB_Appel_Recu IS NULL)
+      ${whereSql}
       `,
-      [emiMin, emiMax, recMin, recMax]
+      whereParams
     );
 
     return { data: rows, total, page: p, limit: L };
@@ -85,21 +100,25 @@ export async function findClientsPaginated(params = {}) {
 
 export async function countFilteredClients(params = {}) {
   const toInt = (v, d) => (Number.isFinite(parseInt(v, 10)) ? parseInt(v, 10) : d);
-  const emiMin = toInt(params.appelsEmisMin, 0);
-  const emiMax = toInt(params.appelsEmisMax, 1_000_000);
-  const recMin = toInt(params.appelsRecusMin, 0);
-  const recMax = toInt(params.appelsRecusMax, 1_000_000);
+  
+  const emiMin = params.appelsEmisMin !== undefined ? toInt(params.appelsEmisMin, 0) : 0;
+  const emiMax = params.appelsEmisMax !== undefined ? toInt(params.appelsEmisMax, 1000000) : 1000000;
+  const recMin = params.appelsRecusMin !== undefined ? toInt(params.appelsRecusMin, 0) : 0;
+  const recMax = params.appelsRecusMax !== undefined ? toInt(params.appelsRecusMax, 1000000) : 1000000;
+  const q = params.q || params.search || "";
 
   try {
+    const { whereSql, params: whereParams } = buildWhere({ emiMin, emiMax, recMin, recMax, q });
+    
     const [[{ total }]] = await pool.query(
       `
       SELECT COUNT(*) AS total
       FROM Client
-      WHERE (NB_appel_Emis BETWEEN ? AND ? OR NB_appel_Emis IS NULL)
-        AND (NB_Appel_Recu BETWEEN ? AND ? OR NB_Appel_Recu IS NULL)
+      ${whereSql}
       `,
-      [emiMin, emiMax, recMin, recMax]
+      whereParams
     );
+    
     return total;
   } catch (error) {
     console.error("Erreur SQL (countFilteredClients) :", error);

@@ -1,0 +1,231 @@
+import React, { useEffect, useMemo, useState } from "react";
+import { Card, CardBody, CardHeader, Input, Spinner, Badge, Button } from "reactstrap";
+import api from "api";
+import { Link } from "react-router-dom";
+import Header from "components/Headers/Header";
+import CallHistoryByPhoneModal from "./CallHistoryModal";
+
+// Formatte le numéro pour affichage (ex: 0893022000 -> 08-93-02-20-00)
+const formatPhoneNumber = (num) => {
+  const digits = (num || "").replace(/\D/g, "");
+  if (digits.length !== 10) return digits;
+  return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`;
+};
+
+const fmtDuree = (s) => {
+  const n = Number(s) || 0;
+  const m = Math.floor(n / 60);
+  const sec = n % 60;
+  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+};
+
+const typeBadge = (t) => {
+  if (t === 1 || t === "1") return <Badge color="info">Émis</Badge>;
+  if (t === 2 || t === "2") return <Badge color="success">Reçu</Badge>;
+  if (t === 0 || t === "0") return <Badge color="secondary">Indéf.</Badge>;
+  return <Badge color="light">{t}</Badge>;
+};
+
+const SousStatutPill = ({ value }) => (
+  <Badge color="danger" className="ml-2">
+    {value || "—"}
+  </Badge>
+);
+
+const DEBOUNCE_MS = 400;
+const ENDPOINT = "/api/appels/latestByPhone";
+
+const DernierAppelClientParNumero = () => {
+  const [numeroInput, setNumeroInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null); // { appel, client } OU null
+  const [error, setError] = useState("");
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
+  // Normalisation: on retire tout sauf les chiffres
+  const normalized = (numeroInput || "").replace(/\D/g, "").trim();
+  const canSearch = normalized.length >= 5;
+
+  const doSearch = async (raw) => {
+    const digits = (raw || "").replace(/\D/g, "").trim();
+    if (digits.length < 5) {
+      setResult(null);
+      setError("");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const { data } = await api.post(ENDPOINT, { numero: digits });
+      if (data?.appel) {
+        setResult({
+          appel: data.appel,
+          client: data.client ?? null,
+        });
+      } else {
+        setResult(null);
+        setError("Aucun appel trouvé pour ce numéro.");
+      }
+    } catch (e) {
+      console.error("DernierAppelClientParNumero error:", e);
+      const status = e?.response?.status;
+      if (status === 404) setError("Endpoint introuvable (404) — vérifie le chemin côté backend.");
+      else if (status === 400) setError(e?.response?.data?.message || "Requête invalide (400).");
+      else setError("Erreur serveur lors de la recherche.");
+      setResult(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debounce input
+  useEffect(() => {
+    const t = setTimeout(() => doSearch(numeroInput), DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [numeroInput]);
+
+  const headerTitle = useMemo(() => {
+    if (!result?.client) return "Dernier appel (par numéro)";
+    const c = result.client;
+    const nom = [c?.Prenom, c?.Nom].filter(Boolean).join(" ").trim() || `Client ${c?.IDClient}`;
+    return `Dernier appel — ${nom}`;
+  }, [result]);
+
+  return (
+    <>
+      <Header title="Dernier Appels (par numéro)" />
+
+      <Card className="shadow">
+        <CardHeader>
+          <div className="d-flex align-items-center justify-content-between">
+            <h3 className="mb-0">{headerTitle}</h3>
+            <div style={{ width: 320 }}>
+              <Input
+                type="text"
+                inputMode="tel"
+                placeholder="📞 Numéro client (min. 5 chiffres)"
+                value={numeroInput}
+                onChange={(e) => setNumeroInput(e.target.value)}
+              />
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardBody>
+          {!canSearch && <div className="text-muted">Tape un numéro pour chercher…</div>}
+
+          {canSearch && loading && (
+            <div className="d-flex align-items-center">
+              <Spinner size="sm" color="primary" className="mr-2" /> Recherche…
+            </div>
+          )}
+
+          {canSearch && !loading && error && (
+            <div className="text-danger">{error}</div>
+          )}
+
+          {canSearch && !loading && !error && result && (
+            <div className="p-3 border rounded">
+              {/* Bouton Historique */}
+              <div className="mb-3">
+                <Button
+                  color="primary"
+                  size="sm"
+                  onClick={() => setIsHistoryOpen(true)}
+                  disabled={!normalized}
+                >
+                  Voir l'historique
+                </Button>
+              </div>
+
+              {/* Lien client si disponible */}
+              <div className="mb-2">
+                <strong>Client :</strong>{" "}
+                {result.client ? (
+                  <>
+                    <Link
+                      to={`/admin/clients?focus=${result.client.IDClient}`}
+                      className="text-primary font-weight-bold"
+                    >
+                      {[result.client.Prenom, result.client.Nom]
+                        .filter(Boolean)
+                        .join(" ") || result.client.IDClient}
+                    </Link>{" "}
+                  </>
+                ) : (
+                  <em className="text-muted">inconnu (IDClient null)</em>
+                )}
+              </div>
+
+              {/* Détails appel */}
+              <div className="d-flex flex-wrap">
+                <div className="mr-4 mb-2">
+                  <strong>Date :</strong>{" "}
+                  {result.appel.Date
+                    ? new Date(result.appel.Date).toLocaleDateString()
+                    : "—"}
+                </div>
+                <div className="mr-4 mb-2">
+                  <strong>Heure :</strong> {result.appel.Heure || "—"}
+                </div>
+                <div className="mr-4 mb-2">
+                  <strong>Type :</strong> {typeBadge(result.appel.Type_Appel)}
+                </div>
+                <div className="mr-4 mb-2">
+                  <strong>Durée :</strong> {fmtDuree(result.appel.Duree_Appel)}
+                </div>
+                <div className="mr-4 mb-2">
+                  <strong>Numéro :</strong> {formatPhoneNumber(result.appel.Numero) || "—"}
+                </div>
+                <div className="mb-2">
+                  <strong>Sous Statut :</strong>{" "}
+                  <SousStatutPill value={result.appel.Sous_Statut} />
+                </div>
+              </div>
+
+              <div className="d-flex flex-wrap">
+                <div className="mr-4 mb-2">
+                  <strong>Agent Récep. :</strong>{" "}
+                  {result.appel.IDAgent_Reception ? (
+                    <Link to={`/admin/agentsReception?focus=${result.appel.IDAgent_Reception}`}>
+                      {result.appel.IDAgent_Reception}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </div>
+                <div className="mr-4 mb-2">
+                  <strong>Agent Émiss. :</strong>{" "}
+                  {result.appel.IDAgent_Emmission ? (
+                    <Link to={`/admin/agents?focus=${result.appel.IDAgent_Emmission}`}>
+                      {result.appel.IDAgent_Emmission}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </div>
+              </div>
+
+              <div className="mt-2">
+                <strong>Commentaire :</strong>
+                <div className="border rounded p-2 mt-1" style={{ background: "#fafafa" }}>
+                  {result.appel.Commentaire || "—"}
+                </div>
+              </div>
+            </div>
+          )}
+        </CardBody>
+      </Card>
+
+      <CallHistoryByPhoneModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        numero={normalized}
+        titleSuffix={formatPhoneNumber(normalized)}
+      />
+    </>
+  );
+};
+
+export default DernierAppelClientParNumero;

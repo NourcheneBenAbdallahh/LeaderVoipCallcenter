@@ -11,13 +11,20 @@ import sousStatutRoutes from "./src/modules/sous_statut/routes/statutRoutes.js";
 import agentReceptionRoutes from "./src/modules/agentReception/routes/agentReceptionRoutes.js";
 import JournalRoutes from "./src/modules/journalAppelAffetation/routes/JournalRoutes.js";
 import authRoutes from "./src/modules/auth/routes/authRoutes.js";
-
+import dernierRoutes from "./src/modules/dernierAppel/routes/dernierRoutes.js";
 const app = express();
 app.use(cors());
+app.use(express.json());
 
+
+// Routes SANs DB (pas besoin de région)
+app.get("/test", (_req, res) => res.send("✅ Serveur OK"));
+app.get("/api/health", (req, res) => res.json({ ok: true }));
+
+
+// Région obligatoire pour la suite
 app.use(regionMiddleware);     
 
-app.use(express.json());
 // ...
 
 
@@ -33,15 +40,16 @@ app.use("/api", appelRoutes);
 app.use("/api", sousStatutRoutes);
 app.use("/api", JournalRoutes);
 app.use("/auth", authRoutes);
+app.use("/api", dernierRoutes);
 
 const PORT = Number(process.env.PORT || 5000);
 
 (async () => {
-  try {
+ /* try {
     await initDB(); // ping des 3 pools configurés
   } catch (e) {
     console.error("🚫 initDB a des erreurs (certaines régions peuvent être KO). Le serveur démarre quand même.");
-  }
+  }*/
 
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`✅ Backend lancé sur http://localhost:${PORT}`);

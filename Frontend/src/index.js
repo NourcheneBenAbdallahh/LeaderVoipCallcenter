@@ -21,7 +21,7 @@ import RegionSelect from "views/Region/RegionSelect";
 
 const Start = () => {
   const hasRegion = !!localStorage.getItem("region");
-  return <Navigate to={hasRegion ? "/auth/login" : "/select-region"} replace />;
+  return <Navigate to={hasRegion ? "/select-region" : "/select-region"} replace />;
 };
 
 const root = ReactDOM.createRoot(document.getElementById("root"));

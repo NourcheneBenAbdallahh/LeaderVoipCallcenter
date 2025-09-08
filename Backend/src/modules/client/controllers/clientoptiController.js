@@ -1,13 +1,8 @@
-// src/controllers/clientController.js
 import {
   findClientsPaginated,
   countFilteredClients,
 } from "../services/clientoptiService.js"; 
 
-/**
- * GET /api/clients
- * Query params: page, limit, appelsEmisMin, appelsEmisMax, appelsRecusMin, appelsRecusMax
- */
 export async function getClients(req, res) {
   try {
     const {
@@ -17,7 +12,12 @@ export async function getClients(req, res) {
       appelsEmisMax,
       appelsRecusMin,
       appelsRecusMax,
+      q,        // Paramètre de recherche
+      search,   // Alternative à 'q'
     } = req.query;
+
+    // Utilise 'q' ou 'search' comme terme de recherche
+    const searchTerm = q || search;
 
     const result = await findClientsPaginated({
       page,
@@ -26,6 +26,7 @@ export async function getClients(req, res) {
       appelsEmisMax,
       appelsRecusMin,
       appelsRecusMax,
+      q: searchTerm, // Passe le terme de recherche
     });
 
     return res.json({
@@ -41,11 +42,6 @@ export async function getClients(req, res) {
   }
 }
 
-/**
- * POST /api/clients/filter
- * Body: appelsEmisMin, appelsEmisMax, appelsRecusMin, appelsRecusMax, page, limit
- * (Même logique que GET mais en POST si tu préfères envoyer le corps)
- */
 export async function filterClients(req, res) {
   try {
     const {
@@ -55,7 +51,11 @@ export async function filterClients(req, res) {
       appelsEmisMax,
       appelsRecusMin,
       appelsRecusMax,
+      q,        // Recherche dans le body aussi
+      search,
     } = req.body || {};
+
+    const searchTerm = q || search;
 
     const result = await findClientsPaginated({
       page,
@@ -64,6 +64,7 @@ export async function filterClients(req, res) {
       appelsEmisMax,
       appelsRecusMin,
       appelsRecusMax,
+      q: searchTerm,
     });
 
     return res.json({
@@ -79,10 +80,6 @@ export async function filterClients(req, res) {
   }
 }
 
-/**
- * (Optionnel) GET /api/clients/count
- * Query params comme getClients, mais ne renvoie que le total.
- */
 export async function getClientsCount(req, res) {
   try {
     const {
@@ -90,13 +87,18 @@ export async function getClientsCount(req, res) {
       appelsEmisMax,
       appelsRecusMin,
       appelsRecusMax,
+      q,
+      search,
     } = req.query;
+
+    const searchTerm = q || search;
 
     const total = await countFilteredClients({
       appelsEmisMin,
       appelsEmisMax,
       appelsRecusMin,
       appelsRecusMax,
+      q: searchTerm,
     });
 
     return res.json({ total });

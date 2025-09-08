@@ -1,0 +1,17 @@
+<label className="d-inline-flex align-items-center" style={{ color: "#172B4D", cursor: "pointer", whiteSpace: "nowrap" }}>
+  <input
+    type="checkbox"
+    className="mr-2"
+    checked={remember}
+    onChange={(e) => setRemember(e.target.checked)}
+  />
+  <span>Se souvenir de moi</span>
+</label>
+
+
+//login
+          <label className="form-control-label" style={{ color: "#172B4D" }}>Login</label>
+
+
+//mdp
+          <label className="form-control-label" style={{ color: "#172B4D" }}>Mot de passe</label>

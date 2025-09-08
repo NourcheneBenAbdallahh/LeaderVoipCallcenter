@@ -26,6 +26,14 @@ const typeBadge = (t) => {
   return <Badge color="light">{t}</Badge>;
 };
 
+const getInitials = (full) =>
+  (full ?? "")
+    .trim()
+    .split(/\s+/)
+    .map(s => s[0]?.toUpperCase())
+    .slice(0, 2)
+    .join("") || "•";
+
 const AppelsTable = ({
   data,
   sortBy,
@@ -35,7 +43,10 @@ const AppelsTable = ({
   dernierAppel,
   selectedRows,
   onSelectRow,
-  onSelectAll,
+  onSelectAll,  
+  clientNameById = {},
+agentReceptionNameById = {},
+  agentNameById = {},
 }) => {
   const allSelected = data.length > 0 && data.every((r) => selectedRows.includes(r.IDAppel));
 
@@ -59,7 +70,6 @@ const AppelsTable = ({
                 onChange={(e) => onSelectAll(e.target.checked)}
               />
             </th>
-            <SortHeader label="IDAppel" col="IDAppel" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             <SortHeader label="Date" col="Date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             <SortHeader label="Heure" col="Heure" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             <SortHeader label="Type" col="Type_Appel" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
@@ -93,7 +103,6 @@ const AppelsTable = ({
                   />
                 </td>
 
-                <td>{r.IDAppel}</td>
                 <td>{r.Date ? new Date(r.Date).toLocaleDateString() : "—"}</td>
                 <td>{r.Heure || "—"}</td>
                 <td>{typeBadge(r.Type_Appel)}</td>
@@ -110,31 +119,67 @@ const AppelsTable = ({
                 </td>
 
                 <td>{r.Numero || "—"}</td>
-                <td>
-                  {r.IDClient ? (
-                    <Link to={`/admin/clients?focus=${r.IDClient}`}>{r.IDClient}</Link>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td>
-                  {r.IDAgent_Reception != null ? (
-                    <Link to={`/admin/agentsReception?focus=${r.IDAgent_Reception}`}>
-                      {r.IDAgent_Reception}
-                    </Link>
-                  ) : (
-                    "—"
-                  )}
-                </td>
-                <td>
-                  {r.IDAgent_Emmission ? (
-                    <Link to={`/admin/agents?focus=${r.IDAgent_Emmission}`}>
-                      {r.IDAgent_Emmission}
-                    </Link>
-                  ) : (
-                    "—"
-                  )}
-                </td>
+               <td>
+  {r.IDClient && clientNameById?.[r.IDClient] ? (
+    <Link
+      to={`/admin/clients?focus=${r.IDClient}`}
+      className="d-flex align-items-center text-primary"
+      title={clientNameById[r.IDClient]}
+    >
+      <span
+        className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
+        style={{ width: 22, height: 22, fontSize: 12 }}
+      >
+        {getInitials(clientNameById[r.IDClient])}
+      </span>
+      <span className="font-weight-bold">{clientNameById[r.IDClient]}</span>
+    </Link>
+  ) : (
+    "—"
+  )}
+</td>
+
+              <td>
+  {r.IDAgent_Reception && agentReceptionNameById?.[r.IDAgent_Reception] ? (
+    <Link
+      to={`/admin/agentsReception?focus=${r.IDAgent_Reception}`}
+      className="d-flex align-items-center text-primary"
+      title={agentReceptionNameById[r.IDAgent_Reception]}
+    >
+      <span
+        className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
+        style={{ width: 22, height: 22, fontSize: 12 }}
+      >
+        {getInitials(agentReceptionNameById[r.IDAgent_Reception])}
+      </span>
+      <span className="font-weight-bold">{agentReceptionNameById[r.IDAgent_Reception]}</span>
+    </Link>
+  ) : (
+    "—"
+  )}
+</td>
+         
+<td>
+  {r.IDAgent_Emmission && agentNameById?.[r.IDAgent_Emmission] ? (
+    <Link
+      to={`/admin/agents?focus=${r.IDAgent_Emmission}`}
+      className="d-flex align-items-center text-primary"
+      title={agentNameById[r.IDAgent_Emmission]}
+    >
+      <span
+        className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
+        style={{ width: 22, height: 22, fontSize: 12 }}
+      >
+        {getInitials(agentNameById[r.IDAgent_Emmission])}
+      </span>
+      <small className="text-muted d-inline-block text-truncate" style={{ maxWidth: 180 }}>
+        {agentNameById[r.IDAgent_Emmission]}
+      </small>
+    </Link>
+  ) : (
+    "—"
+  )}
+</td>
                 <td>
                   <Badge color={getBadgeColor(r.Sous_Statut)}>{r.Sous_Statut || "—"}</Badge>
                 </td>

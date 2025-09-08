@@ -73,7 +73,6 @@ const AffectationTable = ({
               onChange={(e) => onSelectAll(e.target.checked)}
             />
           </th>
-          <SortHeader label="IDAppel" col="IDAppel" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
           <SortHeader label="Date" col="Date" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
           <SortHeader label="Heure" col="Heure" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
           <SortHeader label="Type" col="Type_Appel" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
@@ -107,7 +106,6 @@ const AffectationTable = ({
                 />
               </td>
 
-              <td>{r.IDAppel}</td>
               <td>{r.Date ? new Date(r.Date).toLocaleDateString() : "—"}</td>
               <td>{r.Heure || "—"}</td>
               <td>{typeBadge(r.Type_Appel)}</td>
@@ -125,59 +123,48 @@ const AffectationTable = ({
             {r.Numero || "—"}
           </td>
 
-             <td>
-  {r.IDClient ? (
-    <>
-      <Link to={`/admin/clients?focus=${r.IDClient}`} className="d-block text-primary font-weight-bold">
-        {r.IDClient}
-      </Link>
-
-      <div className="d-flex align-items-center mt-1">
-        <span
-          className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
-          style={{ width: 22, height: 22, fontSize: 12 }}
-          title={clientNameById?.[r.IDClient] || ""}
-        >
-          {getInitials(clientNameById?.[r.IDClient])}
-        </span>
-        <small className="text-muted">
-          {clientNameById?.[r.IDClient] ?? <em>—</em>}
-        </small>
-      </div>
-
-   
-    </>
-  ) : "—"}
+<td>
+  {r.IDClient && clientNameById?.[r.IDClient] ? (
+    <Link
+      to={`/admin/clients?focus=${r.IDClient}`}
+      className="d-flex align-items-center text-primary"
+      title={clientNameById[r.IDClient]}
+    >
+      <span
+        className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
+        style={{ width: 22, height: 22, fontSize: 12 }}
+      >
+        {getInitials(clientNameById[r.IDClient])}
+      </span>
+      <span className="font-weight-bold">{clientNameById[r.IDClient]}</span>
+    </Link>
+  ) : (
+    "—"
+  )}
 </td>
 
-
-            <td>
-  {r.IDAgent_Emmission ? (
-    <>
-      {/* ID en valeur principale */}
-      <Link to={`/admin/agents?focus=${r.IDAgent_Emmission}`} className="d-block text-primary font-weight-bold">
-        {r.IDAgent_Emmission}
-      </Link>
-
-      {/* Variante A: avatar + nom en gris */}
-      <div className="d-flex align-items-center mt-1">
-        <span
-          className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
-          style={{ width: 22, height: 22, fontSize: 12 }}
-          title={agentNameById?.[r.IDAgent_Emmission] || ""}
-        >
-          {getInitials(agentNameById?.[r.IDAgent_Emmission])}
-        </span>
-   <small className="text-muted d-inline-block text-truncate" style={{ maxWidth: 180 }}>
-  {agentNameById?.[r.IDAgent_Emmission] ?? <em>—</em>}
-</small>
-
-      </div>
-
-    
-    </>
-  ) : "—"}
+<td>
+  {r.IDAgent_Emmission && agentNameById?.[r.IDAgent_Emmission] ? (
+    <Link
+      to={`/admin/agents?focus=${r.IDAgent_Emmission}`}
+      className="d-flex align-items-center text-primary"
+      title={agentNameById[r.IDAgent_Emmission]}
+    >
+      <span
+        className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
+        style={{ width: 22, height: 22, fontSize: 12 }}
+      >
+        {getInitials(agentNameById[r.IDAgent_Emmission])}
+      </span>
+      <small className="text-muted d-inline-block text-truncate" style={{ maxWidth: 180 }}>
+        {agentNameById[r.IDAgent_Emmission]}
+      </small>
+    </Link>
+  ) : (
+    "—"
+  )}
 </td>
+
 
               <td>
 <Badge color="danger">{r.Sous_Statut || "—"}</Badge>              </td>
