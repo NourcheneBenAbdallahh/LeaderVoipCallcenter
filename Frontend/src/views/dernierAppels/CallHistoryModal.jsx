@@ -4,20 +4,10 @@ import {
   Button, Table, Badge, Spinner
 } from "reactstrap";
 import api from "api";
-import { Link } from "react-router-dom";
-const getInitials = (full) =>
-  (full ?? "")
-    .trim()
-    .split(/\s+/)
-    .map(s => s[0]?.toUpperCase())
-    .slice(0, 2)
-    .join("") || "•";
 
-
-// Formatte le numéro pour affichage (ex: 0893022000 -> 08-93-02-20-00)
 const formatPhoneNumber = (num) => {
   const digits = (num || "").replace(/\D/g, "");
-  if (digits.length !== 10) return digits; // Retourne brut si longueur incorrecte
+  if (digits.length !== 10) return digits;
   return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`;
 };
 
@@ -40,8 +30,8 @@ const ENDPOINT = "/api/appels/historyByPhone";
 export default function CallHistoryByPhoneModal({
   isOpen,
   onClose,
-  numero, // numéro "digits-only" à requêter
-  titleSuffix = "" // optionnel, ex: "08-93-02-20-00"
+  numero,
+  titleSuffix = ""
 }) {
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
@@ -51,6 +41,8 @@ export default function CallHistoryByPhoneModal({
   const [err, setErr] = useState("");
 
   const normalizedNumero = (numero || "").replace(/\D/g, "").trim();
+const [commentOpen, setCommentOpen] = useState(false);
+const [selectedComment, setSelectedComment] = useState("");
 
   const load = async (p = page, l = limit) => {
     if (!normalizedNumero) return;
@@ -85,122 +77,11 @@ export default function CallHistoryByPhoneModal({
   }, [isOpen, normalizedNumero, limit]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
-
-
-
-  
-  const [agents, setAgents] = useState([]);
-useEffect(() => {
-  let alive = true;
-  (async () => {
-    try {
-      //      const { data } = await api.get("http://localhost:5000/api/agents");
-      const { data } = await api.get("/api/agents");
-
-
-      const raw = Array.isArray(data?.agents)
-        ? data.agents
-        : (Array.isArray(data) ? data : []);
-
-      const filtered = raw;
-
-      const list = filtered
-        .map(a => {
-          const id =
-            a.IDAgent_Emmission ??
-            a.IDAgent_Reception ??
-            a.IDAgent ??
-            a.id;
-
-          const nom =
-            `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() ||
-            a.Login ||
-            `Agent ${id ?? ""}`;
-
-          return { id, nom };
-        })
-        .filter(a => a.id != null);
-
-      if (alive) setAgents(list);
-    } catch (e) {
-      console.error("Erreur chargement agents:", e);
-      if (alive) setAgents([]);
-    }
-  })();
-
-  return () => { alive = false; };
-}, []);
-
-  const agentNameById = Object.fromEntries((agents || []).map(a => [a.id, a.nom]));
-
-const toKey = (v) => (v == null ? "" : String(v).trim());
-
-  // --- agents Réception ---
-const [agentsRecep, setAgentsReception] = useState([]);
-
-useEffect(() => {
-  let alive = true;
-  (async () => {
-    try {
-      const { data } = await api.get("/api/agentsReception");
-
-      // Rendre robuste selon le shape renvoyé par l'API
-      const raw =
-        Array.isArray(data?.agentsReception) ? data.agentsReception :
-        Array.isArray(data?.agentsRecep)     ? data.agentsRecep     :
-        Array.isArray(data?.agents)          ? data.agents          :
-        Array.isArray(data)                  ? data                 : [];
-
-      const list = raw
-        .map(a => {
-          const id  = a.IDAgent_Reception ?? a.IDAgent ?? a.id ?? a.ID;
-          const nom =
-            `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() ||
-            a.Login ||
-            (id != null ? `Agent ${id}` : "");
-          return { id: toKey(id), nom };
-        })
-        .filter(a => a.id !== "" && a.nom !== "");
-
-      if (alive) setAgentsReception(list);
-    } catch (e) {
-      console.error("Erreur chargement agents Réception:", e);
-      if (alive) setAgentsReception([]);
-    }
-  })();
-  return () => { alive = false; };
-}, []);
-
-  const agentReceptionNameById = Object.fromEntries((agentsRecep || []).map(a => [a.id, a.nom]));
-
-  // clients
-  const [clients, setClients] = useState([]);
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        //        const res = await api.get("http://localhost:5000/api/clients");
-
-        const res = await api.get("/api/clients");
-        const list = (Array.isArray(res.data) ? res.data : [])
-          .map(c => ({
-            id: c.IDClient ?? c.id,
-            nom: `${c.Prenom ?? ""} ${c.Nom ?? ""}`.trim() || c.RaisonSociale || `Client ${c.IDClient ?? c.id ?? ""}`,
-          }))
-          .filter(c => c.id != null);
-        if (alive) setClients(list);
-      } catch (e) {
-        console.error("Erreur chargement clients:", e);
-        if (alive) setClients([]);
-      }
-    })();
-    return () => { alive = false; };
-  }, []);
-
-  const clientNameById = Object.fromEntries((clients || []).map(c => [c.id, c.nom]));
+const truncate = (text, max = 100) =>
+  text && text.length > max ? text.slice(0, max) + "…" : text;
 
   return (
-    <Modal isOpen={isOpen} toggle={onClose} size="lg">
+    <Modal isOpen={isOpen} toggle={onClose} size="xl">
       <ModalHeader toggle={onClose}>
         Historique des appels — N° {titleSuffix || formatPhoneNumber(numero)}
       </ModalHeader>
@@ -240,107 +121,112 @@ useEffect(() => {
               </div>
             </div>
 
-            <Table responsive hover className="align-middle">
-              <thead style={{ backgroundColor: "#e0f0ff" }}>
-                <tr>
-                  <th>Date</th>
-                  <th>Heure</th>
-                  <th>Type</th>
-                  <th>Durée</th>
-                  <th>Numéro</th>
-                  <th>Sous Statut</th>
-                  <th>Agent Récep.</th>
-                  <th>Agent Émiss.</th>
-                  <th>Client</th>                 
-                   <th>Commentaire</th>
-
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
+            <div className="table-responsive">
+              <Table hover className="align-middle">
+                <thead style={{ backgroundColor: "#e0f0ff" }}>
                   <tr>
-                    <td colSpan="8" className="text-center text-muted">
-                      Aucun appel.
-                    </td>
+                    <th>Date</th>
+                    <th>Heure</th>
+                    <th>Type</th>
+                    <th>Durée</th>
+                    <th>Numéro</th>
+                    <th>Sous Statut</th>
+                    <th>Agent Émission</th>
+                    <th>Agent Réception</th>
+                    <th>Client</th>
+                    <th>Commentaire</th>
                   </tr>
-                ) : (
-                  rows.map((r) => (
-                    <tr key={r.IDAppel}>
-                      <td>{r.Date ? new Date(r.Date).toLocaleDateString() : "—"}</td>
-                      <td>{r.Heure || "—"}</td>
-                      <td>{typeBadge(r.Type_Appel)}</td>
-                      <td>{fmtDuree(r.Duree_Appel)}</td>
-                      <td>{formatPhoneNumber(r.Numero) || "—"}</td>
-                      <td><Badge color="danger">{r.Sous_Statut || "—"}</Badge></td>
-                     
-              <td>
-  {r.IDAgent_Reception && agentReceptionNameById?.[r.IDAgent_Reception] ? (
-    <Link
-      to={`/admin/agentsReception?focus=${r.IDAgent_Reception}`}
-      className="d-flex align-items-center text-primary"
-      title={agentReceptionNameById[r.IDAgent_Reception]}
-    >
-      <span
-        className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
-        style={{ width: 22, height: 22, fontSize: 12 }}
-      >
-        {getInitials(agentReceptionNameById[r.IDAgent_Reception])}
-      </span>
-      <span className="font-weight-bold">{agentReceptionNameById[r.IDAgent_Reception]}</span>
-    </Link>
-  ) : (
-    "—"
-  )}
-</td>
-         
-<td>
-  {r.IDAgent_Emmission && agentNameById?.[r.IDAgent_Emmission] ? (
-    <Link
-      to={`/admin/agents?focus=${r.IDAgent_Emmission}`}
-      className="d-flex align-items-center text-primary"
-      title={agentNameById[r.IDAgent_Emmission]}
-    >
-      <span
-        className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
-        style={{ width: 22, height: 22, fontSize: 12 }}
-      >
-        {getInitials(agentNameById[r.IDAgent_Emmission])}
-      </span>
-      <small className="text-muted d-inline-block text-truncate" style={{ maxWidth: 180 }}>
-        {agentNameById[r.IDAgent_Emmission]}
-      </small>
-    </Link>
-  ) : (
-    "—"
-  )}
-</td>
-              <td>
-  {r.IDClient && clientNameById?.[r.IDClient] ? (
-    <Link
-      to={`/admin/clients?focus=${r.IDClient}`}
-      className="d-flex align-items-center text-primary"
-      title={clientNameById[r.IDClient]}
-    >
-      <span
-        className="rounded-circle border bg-light d-inline-flex align-items-center justify-content-center mr-2"
-        style={{ width: 22, height: 22, fontSize: 12 }}
-      >
-        {getInitials(clientNameById[r.IDClient])}
-      </span>
-      <span className="font-weight-bold">{clientNameById[r.IDClient]}</span>
-    </Link>
-  ) : (
-    "—"
-  )}
-</td>
-                      <td>{r.Commentaire || "—"}</td>
+                </thead>
+                <tbody>
+                  {rows.length === 0 ? (
+                    <tr>
+                      <td colSpan="10" className="text-center text-muted">
+                        Aucun appel.
+                      </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </Table>
+                  ) : (
+                    rows.map((r) => (
+                      <tr key={r.IDAppel}>
+                        <td>{r.Date ? new Date(r.Date).toLocaleDateString() : "—"}</td>
+                        <td>{r.Heure || "—"}</td>
+                        <td>{typeBadge(r.Type_Appel)}</td>
+                        <td>{fmtDuree(r.Duree_Appel)}</td>
+                        <td>{formatPhoneNumber(r.Numero) || "—"}</td>
+                        <td><Badge color="danger">{r.Sous_Statut || "—"}</Badge></td>
+                        
+                        {/* AFFICHAGE DES NOMS DES AGENTS */}
+                        <td>
+                          {r.Agent_Emmission ? (
+                            <span className="text-info">
+                              {r.Agent_Emmission.Prenom} {r.Agent_Emmission.Nom}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        
+                        <td>
+                          {r.Agent_Reception ? (
+                            <span className="text-success">
+                              {r.Agent_Reception.Prenom} {r.Agent_Reception.Nom}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        
+                        {/* AFFICHAGE DU NOM DU CLIENT */}
+                        <td>
+                          {r.Client ? (
+                            <span className="text-primary">
+                              {r.Client.Prenom} {r.Client.Nom}
+                             
+                            </span>
+                          ) : r.IDClient ? (
+                            <span className="text-muted">Client #{r.IDClient}</span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        
+                   <td>
+  <div
+    style={{
+      maxWidth: 220,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap"
+    }}
+    title={r.Commentaire || ""} // hover = voir tout
+  >
+    {r.Commentaire || "—"}
+  </div>
 
-            <div className="d-flex justify-content-between align-items-center">
+  {r.Commentaire && r.Commentaire.length > 0 && (
+    <Button
+      size="sm"
+      color="link"
+      className="p-0 ml-1"
+      onClick={() => {
+        setSelectedComment(r.Commentaire);
+        setCommentOpen(true);
+      }}
+    >
+      Voir plus
+    </Button>
+  )}
+</td>
+
+
+
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </Table>
+            </div>
+
+            <div className="d-flex justify-content-between align-items-center mt-3">
               <Button
                 size="sm"
                 color="secondary"
@@ -367,6 +253,22 @@ useEffect(() => {
       <ModalFooter>
         <Button color="secondary" onClick={onClose}>Fermer</Button>
       </ModalFooter>
+
+      <Modal isOpen={commentOpen} toggle={() => setCommentOpen(false)}>
+  <ModalHeader toggle={() => setCommentOpen(false)}>
+    Commentaire complet
+  </ModalHeader>
+  <ModalBody style={{ whiteSpace: "pre-wrap" }}>
+    {selectedComment}
+  </ModalBody>
+  <ModalFooter>
+    <Button color="secondary" onClick={() => setCommentOpen(false)}>
+      Fermer
+    </Button>
+  </ModalFooter>
+</Modal>
+
     </Modal>
+    
   );
 }

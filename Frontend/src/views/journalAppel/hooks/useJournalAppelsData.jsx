@@ -1,10 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import api from "api";
 import { formatDuration } from "../utils/time";
 
 const DEFAULT_LIMIT = 20;
-//const API = "http://localhost:5000/api";
-
 const API = "/api";
 
 const DEFAULT_FILTERS = {
@@ -22,6 +20,58 @@ const DEFAULT_FILTERS = {
 const FILTERS_KEY = "journalAppels.filters.v2";
 const PARAMS_KEY  = "journalAppels.params.v2";
 
+/* ========= Cache données paginées (SWR) ========= */
+const CACHE_PREFIX   = "journalAppels:data:v1"; // + key dérivée des params
+const CACHE_TTL_MS   = 5 * 60 * 1000;           // 5 min
+const REVALIDATE_MS  = 30 * 1000;               // 30 s
+
+function buildDataKey({ page, limit, sortBy, sortDir, filters }) {
+  // on ne met que les champs utiles (stables)
+  const f = {
+    IDAgent_Reception: filters.IDAgent_Reception || "",
+    IDAgent_Emmission: filters.IDAgent_Emmission || "",
+    IDClient: filters.IDClient || "",
+    Sous_Statut: Array.isArray(filters.Sous_Statut) ? filters.Sous_Statut.join("|") : "",
+    dureeMin: filters.dureeMin || "",
+    dureeMax: filters.dureeMax || "",
+    dateFrom: filters.dateFrom || "",
+    dateTo: filters.dateTo || "",
+    q: filters.q || "",
+  };
+  return `${CACHE_PREFIX}:${page}:${limit}:${sortBy}:${sortDir}:${JSON.stringify(f)}`;
+}
+
+function readCache(key) {
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (!ts || !data) return null;
+    if (Date.now() - ts > CACHE_TTL_MS) return null;
+    return data; // { rows, total }
+  } catch { return null; }
+}
+
+function writeCache(key, data) {
+  try {
+    sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+  } catch {}
+}
+
+// signature rapide pour éviter setState inutiles
+function quickSignature(rows) {
+  if (!Array.isArray(rows)) return "0:0";
+  const n = rows.length;
+  const take = Math.min(100, n);
+  let hash = 0;
+  for (let i = 0; i < take; i++) {
+    const r = rows[i] || {};
+    const s = `${r.IDAppel}|${r.Date}|${r.Heure}|${r.Type_Appel}|${r.Duree_Appel}|${r.Sous_Statut}|${r.IDClient}|${r.IDAgent_Reception}|${r.IDAgent_Emmission}`;
+    for (let j = 0; j < s.length; j++) hash = (hash * 31 + s.charCodeAt(j)) | 0;
+  }
+  return `${n}:${hash}`;
+}
+
 // util pour convertir mm:ss/hh:mm:ss vers secondes si tu veux afficher un avg local propre
 const parseDurationToSeconds = (v) => {
   if (v == null) return 0;
@@ -33,7 +83,6 @@ const parseDurationToSeconds = (v) => {
 };
 
 export function useJournalAppelsData() {
-  // jeu de la page courante uniquement
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,24 +107,44 @@ export function useJournalAppelsData() {
 
   const [total, setTotal] = useState(0);
 
-  // persistance
+  // persistance UI
   useEffect(() => {
     localStorage.setItem(FILTERS_KEY, JSON.stringify(filters));
   }, [filters]);
-
   useEffect(() => {
     localStorage.setItem(PARAMS_KEY, JSON.stringify({ page, sortBy, sortDir }));
   }, [page, sortBy, sortDir]);
 
-  // FETCH (pagination serveur)
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const abortRef = useRef(null);
+  const lastSigRef = useRef("");
+
+  const paramsForKey = useMemo(() => ({ page, limit, sortBy, sortDir, filters }), [page, limit, sortBy, sortDir, filters]);
+  const dataKey = useMemo(() => buildDataKey(paramsForKey), [paramsForKey]);
+
+  // FETCH (SWR: cache immédiat + revalidation)
+  const fetchData = useCallback(async (key, showSpinnerIfNoCache = true) => {
+    const cached = readCache(key);
+    if (cached?.rows) {
+      // Affichage instantané
+      const sig = quickSignature(cached.rows);
+      if (sig !== lastSigRef.current) {
+        lastSigRef.current = sig;
+        setRows(cached.rows);
+        setTotal(Number(cached.total) || 0);
+      }
+      setLoading(false);
+    } else if (showSpinnerIfNoCache) {
+      setLoading(true);
+    }
+
+    // Annule l'appel précédent
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
-      const params = {
-        page,
-        limit,
-        sortBy,
-        sortDir,
+      const p = {
+        page, limit, sortBy, sortDir,
         IDAgent_Reception: filters.IDAgent_Reception || undefined,
         IDAgent_Emmission: filters.IDAgent_Emmission || undefined,
         IDClient: filters.IDClient || undefined,
@@ -84,31 +153,49 @@ export function useJournalAppelsData() {
         dureeMin: filters.dureeMin || undefined,
         dureeMax: filters.dureeMax || undefined,
         q: filters.q || undefined,
-        // Sous_Statut: envoyé en CSV
         Sous_Statut: (filters.Sous_Statut && filters.Sous_Statut.length)
           ? filters.Sous_Statut.join(",")
           : undefined,
       };
 
-      const res = await api.get(`${API}/journalappels/opti`, { params });
+      const res = await api.get(`${API}/journalappels/opti`, { params: p, signal: controller.signal });
       const { rows: data, total: t } = res.data || {};
-      setRows(Array.isArray(data) ? data : []);
-      setTotal(Number(t) || 0);
+      const fresh = { rows: Array.isArray(data) ? data : [], total: Number(t) || 0 };
+
+      writeCache(key, fresh);
+
+      const sig = quickSignature(fresh.rows);
+      if (sig !== lastSigRef.current) {
+        lastSigRef.current = sig;
+        setRows(fresh.rows);
+        setTotal(fresh.total);
+      }
     } catch (e) {
-      console.error("Erreur chargement appels (opti):", e);
-      setRows([]);
-      setTotal(0);
+      if (e.name !== "AbortError" && e.name !== "CanceledError") {
+        console.error("Erreur chargement appels (opti):", e);
+        // si pas de cache, on vide pour éviter de rester bloqué
+        if (!cached) { setRows([]); setTotal(0); }
+      }
     } finally {
       setLoading(false);
     }
   }, [page, limit, sortBy, sortDir, filters]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  // première charge & à chaque changement de paramètres
+  useEffect(() => { fetchData(dataKey); }, [fetchData, dataKey]);
+
+  // revalidation périodique + quand l’onglet revient visible
+  useEffect(() => {
+    const onVis = () => { if (document.visibilityState === "visible") fetchData(dataKey, false); };
+    document.addEventListener("visibilitychange", onVis);
+    const id = setInterval(() => fetchData(dataKey, false), REVALIDATE_MS);
+    return () => { document.removeEventListener("visibilitychange", onVis); clearInterval(id); };
+  }, [fetchData, dataKey]);
 
   // actions
   const applyFilters = (next) => {
     setFilters(next);
-    setPage(1); // on revient en page 1 sur changement de filtres
+    setPage(1);
   };
   const clearOneFilter = (key) => {
     const next = { ...filters };
@@ -140,7 +227,6 @@ export function useJournalAppelsData() {
     return rows.filter(r => (r.Sous_Statut ?? "").toString().trim().toUpperCase() === "TRAITE").length;
   }, [rows]);
 
-  // compteur "aujourd'hui" (si tu veux du global, fais un endpoint count)
   const today = new Date().toISOString().slice(0, 10);
   const appelsAujourdHui = useMemo(() => {
     return rows.filter(a => a.Date && String(a.Date).startsWith(today)).length;
@@ -148,7 +234,7 @@ export function useJournalAppelsData() {
 
   return {
     rows, loading,
-    total,       // total filtré (serveur)
+    total,
     page, limit, sortBy, sortDir, filters,
     avgDurationLabel, avgDurationSec,
     totalTraites, appelsAujourdHui,

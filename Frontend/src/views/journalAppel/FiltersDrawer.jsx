@@ -33,10 +33,9 @@ const FiltersDrawer = ({ isOpen, toggle, value, onApply }) => {
   const [ssQuery, setSsQuery] = useState("");
   const fetchedOnce = useRef(false);
 
-  // ✅ Sync AU MOMENT DE L’OUVERTURE uniquement (évite d’écraser les choix en cours)
-  useEffect(() => {
+useEffect(() => {
     if (isOpen) setLocal(value || EMPTY);
-  }, [isOpen]); // <-- pas de "value" ici
+  }, [isOpen]);
 
   //sous-statuts 
   useEffect(() => {

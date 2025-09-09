@@ -19,12 +19,6 @@ const fmtDuree = (s) => {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 };
 
-const typeBadge = (t) => {
-  if (t === 1 || t === "1") return <Badge color="info">Émis</Badge>;
-  if (t === 2 || t === "2") return <Badge color="success">Reçu</Badge>;
-  if (t === 0 || t === "0") return <Badge color="secondary">Indéf.</Badge>;
-  return <Badge color="light">{t}</Badge>;
-};
 
 const SousStatutPill = ({ value }) => (
   <Badge color="danger" className="ml-2">
@@ -38,7 +32,7 @@ const ENDPOINT = "/api/appels/latestByPhone";
 const DernierAppelClientParNumero = () => {
   const [numeroInput, setNumeroInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState(null); // { appel, client } OU null
+  const [result, setResult] = useState(null); 
   const [error, setError] = useState("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
@@ -104,7 +98,7 @@ const DernierAppelClientParNumero = () => {
               <Input
                 type="text"
                 inputMode="tel"
-                placeholder="📞 Numéro client (min. 5 chiffres)"
+                placeholder="📞 Numéro client "
                 value={numeroInput}
                 onChange={(e) => setNumeroInput(e.target.value)}
               />
@@ -139,7 +133,7 @@ const DernierAppelClientParNumero = () => {
                 </Button>
               </div>
 
-              {/* Lien client si disponible */}
+            
               <div className="mb-2">
                 <strong>Client :</strong>{" "}
                 {result.client ? (
@@ -150,8 +144,9 @@ const DernierAppelClientParNumero = () => {
                     >
                       {[result.client.Prenom, result.client.Nom]
                         .filter(Boolean)
-                        .join(" ") || result.client.IDClient}
+                        .join(" ") }
                     </Link>{" "}
+                   
                   </>
                 ) : (
                   <em className="text-muted">inconnu (IDClient null)</em>
@@ -169,9 +164,7 @@ const DernierAppelClientParNumero = () => {
                 <div className="mr-4 mb-2">
                   <strong>Heure :</strong> {result.appel.Heure || "—"}
                 </div>
-                <div className="mr-4 mb-2">
-                  <strong>Type :</strong> {typeBadge(result.appel.Type_Appel)}
-                </div>
+           
                 <div className="mr-4 mb-2">
                   <strong>Durée :</strong> {fmtDuree(result.appel.Duree_Appel)}
                 </div>
@@ -186,21 +179,21 @@ const DernierAppelClientParNumero = () => {
 
               <div className="d-flex flex-wrap">
                 <div className="mr-4 mb-2">
-                  <strong>Agent Récep. :</strong>{" "}
-                  {result.appel.IDAgent_Reception ? (
-                    <Link to={`/admin/agentsReception?focus=${result.appel.IDAgent_Reception}`}>
-                      {result.appel.IDAgent_Reception}
-                    </Link>
+                  <strong>Agent Émission :</strong>{" "}
+                  {result.appel.Agent_Emmission ? (
+                    <span className="text-info">
+                      {result.appel.Agent_Emmission.Prenom} {result.appel.Agent_Emmission.Nom}
+                    </span>
                   ) : (
                     "—"
                   )}
                 </div>
                 <div className="mr-4 mb-2">
-                  <strong>Agent Émiss. :</strong>{" "}
-                  {result.appel.IDAgent_Emmission ? (
-                    <Link to={`/admin/agents?focus=${result.appel.IDAgent_Emmission}`}>
-                      {result.appel.IDAgent_Emmission}
-                    </Link>
+                  <strong>Agent Réception :</strong>{" "}
+                  {result.appel.Agent_Reception ? (
+                    <span className="text-success">
+                      {result.appel.Agent_Reception.Prenom} {result.appel.Agent_Reception.Nom}
+                    </span>
                   ) : (
                     "—"
                   )}

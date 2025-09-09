@@ -1,16 +1,20 @@
 import React from "react";
 import { Badge } from "reactstrap";
-
-const labelize = (k) => ({
-  IDAgent_Reception: "Agent Récep.",
-  IDAgent_Emmission: "Agent Émiss.",
-  IDClient: "Client",
-  dureeMin: "Durée ≥",
-  dureeMax: "Durée ≤",
-  dateFrom: "Du",
-  dateTo: "Au",
-  Sous_Statut: "Sous Statut"
-}[k] || k);
+const labelize = (k) =>
+  ({
+    IDAgent_Reception: "Agent Récep. (ID)",
+    IDAgent_Emmission: "Agent Émiss. (ID)",
+    IDClient:          "Client (ID)",
+    Agent_Reception_Nom: "Agent Récep.",
+    Agent_Emmission_Nom: "Agent Émiss.",
+    Client_Nom:          "Client",
+    dureeMin: "Durée ≥",
+    dureeMax: "Durée ≤",
+    dateFrom: "Du",
+    dateTo: "Au",
+    Sous_Statut: "Sous Statut",
+    q: "Recherche"
+  }[k] || k);
 
 const FilterChips = ({ filters, onRemove }) => {
   const items = [];

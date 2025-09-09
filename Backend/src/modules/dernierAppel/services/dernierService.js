@@ -24,12 +24,18 @@ export async function getLastCallByPhone(req, numero) {
       SELECT
         a.IDAppel, a.Date, a.Heure, a.Type_Appel, a.Duree_Appel, a.Commentaire,
         a.Numero, a.IDClient, a.IDAgent_Emmission, a.IDAgent_Reception, a.Sous_Statut,
-        c.IDClient   AS client_IDClient,
-        c.Nom        AS client_Nom,
-        c.Prenom     AS client_Prenom,
-        c.Telephone  AS client_Telephone
+        c.IDClient AS client_IDClient,
+        c.Nom AS client_Nom,
+        c.Prenom AS client_Prenom,
+        c.Telephone AS client_Telephone,
+        ae.Nom AS agent_emmission_nom,
+        ae.Prenom AS agent_emmission_prenom,
+        ar.Nom AS agent_reception_nom,
+        ar.Prenom AS agent_reception_prenom
       FROM Appel a
       LEFT JOIN Client c ON c.IDClient = a.IDClient
+      LEFT JOIN Agent ae ON ae.IDAgent_Emmission = a.IDAgent_Emmission
+      LEFT JOIN Agent_Reception ar ON ar.IDAgent_Reception = a.IDAgent_Reception
       WHERE a.Numero LIKE ?
       ORDER BY a.Date DESC, a.Heure DESC, a.IDAppel DESC
       LIMIT 1
@@ -48,8 +54,14 @@ export async function getLastCallByPhone(req, numero) {
         Commentaire: r.Commentaire,
         Numero: r.Numero,
         IDClient: r.IDClient,
-        IDAgent_Emmission: r.IDAgent_Emmission,
-        IDAgent_Reception: r.IDAgent_Reception,
+        Agent_Emmission: r.IDAgent_Emmission ? {
+          Nom: r.agent_emmission_nom,
+          Prenom: r.agent_emmission_prenom
+        } : null,
+        Agent_Reception: r.IDAgent_Reception ? {
+          Nom: r.agent_reception_nom,
+          Prenom: r.agent_reception_prenom
+        } : null,
         Sous_Statut: r.Sous_Statut,
       };
 
@@ -68,6 +80,7 @@ export async function getLastCallByPhone(req, numero) {
 
   return { appel: null, client: null };
 }
+
 export async function getCallHistoryByPhone(
   req,
   numero,
@@ -106,13 +119,22 @@ export async function getCallHistoryByPhone(
     params
   );
 
-  // Récupérer les données paginées
+  // Récupérer les données paginées avec les noms des agents
   const [rows] = await db.query(
     `
     SELECT
       a.IDAppel, a.Date, a.Heure, a.Type_Appel, a.Duree_Appel, a.Commentaire,
-      a.Numero, a.IDClient, a.IDAgent_Emmission, a.IDAgent_Reception, a.Sous_Statut
+      a.Numero, a.IDClient, a.Sous_Statut,
+      c.Nom AS client_nom,
+      c.Prenom AS client_prenom,
+      ae.Nom AS agent_emmission_nom,
+      ae.Prenom AS agent_emmission_prenom,
+      ar.Nom AS agent_reception_nom,
+      ar.Prenom AS agent_reception_prenom
     FROM Appel a
+    LEFT JOIN Client c ON c.IDClient = a.IDClient
+    LEFT JOIN Agent ae ON ae.IDAgent_Emmission = a.IDAgent_Emmission
+    LEFT JOIN Agent_Reception ar ON ar.IDAgent_Reception = a.IDAgent_Reception
     ${whereClause}
     ORDER BY a.Date ${order}, a.Heure ${order}, a.IDAppel ${order}
     LIMIT ? OFFSET ?
@@ -120,5 +142,30 @@ export async function getCallHistoryByPhone(
     [...params, L, offset]
   );
 
-  return { total, rows, page: p, limit: L };
+  // Formater les résultats pour inclure les noms au lieu des IDs
+  const formattedRows = rows.map(row => ({
+    IDAppel: row.IDAppel,
+    Date: row.Date,
+    Heure: row.Heure,
+    Type_Appel: row.Type_Appel,
+    Duree_Appel: row.Duree_Appel,
+    Commentaire: row.Commentaire,
+    Numero: row.Numero,
+    Client: row.IDClient ? {
+      IDClient: row.IDClient,
+      Nom: row.client_nom,
+      Prenom: row.client_prenom
+    } : null,
+    Agent_Emmission: row.agent_emmission_nom ? {
+      Nom: row.agent_emmission_nom,
+      Prenom: row.agent_emmission_prenom
+    } : null,
+    Agent_Reception: row.agent_reception_nom ? {
+      Nom: row.agent_reception_nom,
+      Prenom: row.agent_reception_prenom
+    } : null,
+    Sous_Statut: row.Sous_Statut
+  }));
+
+  return { total, rows: formattedRows, page: p, limit: L };
 }

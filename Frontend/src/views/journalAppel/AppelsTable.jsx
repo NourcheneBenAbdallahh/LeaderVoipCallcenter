@@ -172,9 +172,10 @@ agentReceptionNameById = {},
       >
         {getInitials(agentNameById[r.IDAgent_Emmission])}
       </span>
-      <small className="text-muted d-inline-block text-truncate" style={{ maxWidth: 180 }}>
-        {agentNameById[r.IDAgent_Emmission]}
-      </small>
+     
+        <span className="font-weight-bold">        {agentNameById[r.IDAgent_Emmission]}
+</span>
+
     </Link>
   ) : (
     "—"
