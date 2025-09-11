@@ -26,12 +26,15 @@ const Login = () => {
 
   useEffect(() => {
     const token = getToken();
-    console.log("Vérification initiale du token dans Login.jsx:", token);
+    //Test
+    // console.log("Vérification initiale du token dans Login.jsx:", token);
     if (token) {
-      console.log("Token valide, redirection vers /admin");
+     //Test
+     //  console.log("Token valide, redirection vers /admin");
       navigate("/admin", { replace: true });
     } else {
-      console.log("Aucun token, rester sur la page de connexion");
+      //Test
+      // console.log("Aucun token, rester sur la page de connexion");
     }
   }, [navigate]);
 

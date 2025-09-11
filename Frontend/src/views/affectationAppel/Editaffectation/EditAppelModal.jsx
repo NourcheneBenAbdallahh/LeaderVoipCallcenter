@@ -1,4 +1,3 @@
-// src/views/affectationAppel/Editaffectation/EditAppelModal.jsx
 import React, { useEffect, useState, useRef, useMemo } from "react";
 import {
   Modal, ModalHeader, ModalBody, ModalFooter,
@@ -42,7 +41,7 @@ export default function EditAppelModal({ isOpen, onClose, appel, onSaved }) {
       try {
         setSsLoading(true);
         setSsError("");
-        const res = await api.get(`${API}/sous_statutsedd`);
+        const res = await api.get(`${API}/sous_statuts/name`);
         let list = res.data;
 
         if (Array.isArray(list) && list.length && typeof list[0] === "object") {

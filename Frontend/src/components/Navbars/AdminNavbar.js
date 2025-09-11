@@ -1,47 +1,66 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownItem,
   UncontrolledDropdown,
   DropdownToggle,
-  Form,
-  FormGroup,
-  InputGroupAddon,
-  InputGroupText,
-  Input,
-  InputGroup,
   Navbar,
   Nav,
   Container,
   Media,
 } from "reactstrap";
+import { useEffect, useMemo, useState } from "react";
+import { jwtDecode } from "jwt-decode";
 
-import { jwtDecode } from "jwt-decode"; 
+function getStoredToken() {
+  return localStorage.getItem("token") || sessionStorage.getItem("token") || null;
+}
 
 const AdminNavbar = (props) => {
-  // Récupérer le nom de l'utilisateur depuis le token JWT
-  let username = "Guest"; // valpar défaut
-  const token = localStorage.getItem("token");
-  if (token) {
-    try {
-      const decoded = jwtDecode(token); // décoder le JWT
-      username = decoded.nom + " " + decoded.prenom;
-    } catch (err) {
-      console.error("Token invalide");
-    }
-  }
+  const navigate = useNavigate();
+  const [token, setToken] = useState(() => getStoredToken());
 
-  //logout
+  // Se mettre à jour si le token change dans un autre onglet
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === "token") setToken(getStoredToken());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
+  // Décodage sécurisé du token
+  const username = useMemo(() => {
+    if (!token) return "Guest";
+    try {
+      const decoded = jwtDecode(token);
+      const nom = (decoded?.nom || "").toString().trim();
+      const prenom = (decoded?.prenom || "").toString().trim();
+      const full = [nom, prenom].filter(Boolean).join(" ").trim();
+      return full || "Utilisateur";
+    } catch {
+      return "Utilisateur";
+    }
+  }, [token]);
+
   const handleLogout = () => {
-  localStorage.removeItem("token"); // suppr le token
-  window.location.href = "/select-region"; 
-};
+    // on nettoie partout
+    localStorage.removeItem("token");
+    sessionStorage.removeItem("token");
+    setToken(null);
+    navigate("/select-region", { replace: true });
+  };
+
+  // Petites initiales pour l’avatar
+  const initials = useMemo(() => {
+    const parts = username.trim().split(/\s+/);
+    return (parts[0]?.[0] || "").toUpperCase() + (parts[1]?.[0] || "").toUpperCase() || "•";
+  }, [username]);
 
   return (
     <>
       <Navbar className="navbar-top navbar-dark" expand="md" id="navbar-main">
         <Container fluid>
-          {/* Titre de la page */}
           <Link
             className="h4 mb-0 text-white text-uppercase d-none d-lg-inline-block"
             to="/"
@@ -49,29 +68,16 @@ const AdminNavbar = (props) => {
             {props.brandText}
           </Link>
 
-          {/* Formulaire recherche
-          <Form className="navbar-search navbar-search-dark form-inline mr-3 d-none d-md-flex ml-lg-auto">
-            <FormGroup className="mb-0">
-              <InputGroup className="input-group-alternative">
-                <InputGroupAddon addonType="prepend">
-                  <InputGroupText>
-                    <i className="fas fa-search" />
-                  </InputGroupText>
-                </InputGroupAddon>
-                <Input placeholder="Search" type="text" />
-              </InputGroup>
-            </FormGroup>
-          </Form>
- */}
-          {/* Menu utilisateur */}
           <Nav className="align-items-center d-none d-md-flex" navbar>
             <UncontrolledDropdown nav>
               <DropdownToggle className="pr-0" nav>
                 <Media className="align-items-center">
-               <span className="avatar avatar-sm rounded-circle bg-white text-primary d-flex justify-content-center align-items-center">
-  <i className="fas fa-user" />
-</span>
-
+                  <span
+                    className="avatar avatar-sm rounded-circle bg-white text-primary d-flex justify-content-center align-items-center"
+                    style={{ width: 36, height: 36, fontWeight: 700 }}
+                  >
+                    {initials}
+                  </span>
                   <Media className="ml-2 d-none d-lg-block">
                     <span className="mb-0 text-sm font-weight-bold">{username}</span>
                   </Media>
@@ -83,17 +89,8 @@ const AdminNavbar = (props) => {
                   <h6 className="text-overflow m-0">Bienvenue!</h6>
                 </DropdownItem>
 
-                {/* Exemples de liens du menu utilisateur 
-                <DropdownItem to="/admin/user-profile" tag={Link}>
-                  <i className="ni ni-single-02" />
-                  <span>My profile</span>
-                </DropdownItem>
-                <DropdownItem to="/admin/user-profile" tag={Link}>
-                  <i className="ni ni-settings-gear-65" />
-                  <span>Settings</span>
-                </DropdownItem>*/}
                 <DropdownItem divider />
-                <DropdownItem href="#pablo"  onClick={handleLogout}>
+                <DropdownItem onClick={handleLogout}>
                   <i className="ni ni-user-run" />
                   <span>Logout</span>
                 </DropdownItem>

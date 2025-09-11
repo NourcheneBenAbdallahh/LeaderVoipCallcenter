@@ -7,9 +7,11 @@ import {
 import api from "api";
 import useBadgeColor from "utils/useBadgeColor";
 
-/* ---------- utils affichage ---------- */
+/* ---------- utils ---------- */
+const onlyDigits = (v) => (v || "").replace(/\D/g, "").trim();
+
 const formatPhoneNumber = (num) => {
-  const digits = (num || "").replace(/\D/g, "");
+  const digits = onlyDigits(num);
   if (digits.length !== 10) return digits;
   return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`;
 };
@@ -21,16 +23,16 @@ const fmtDuree = (s) => {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 };
 
-
 /* ---------- constantes ---------- */
-const ENDPOINT = "/api/appels/historyByPhone";
+const EP_BY_CLIENT = "/api/appels/historyByClient";
+const EP_BY_PHONE  = "/api/appels/historyByPhone";
 const SOUS_STATUTS_EP = "/api/sous_statuts/name";
 const DEBOUNCE_MS = 400;
 
 /* ---------- mini SWR cache (sessionStorage) ---------- */
 const TTL = 60 * 1000; // 1 min
-const keyFor = (numero, page, limit, sortBy, sort, filters) =>
-  `hist:${numero}:${page}:${limit}:${sortBy}:${sort}:${JSON.stringify(filters)}`;
+const keyFor = (key, page, limit, sortBy, sort, filters) =>
+  `hist:${key}:${page}:${limit}:${sortBy}:${sort}:${JSON.stringify(filters)}`;
 
 const readCache = (k) => {
   try {
@@ -47,21 +49,20 @@ const writeCache = (k, data) => {
   try { sessionStorage.setItem(k, JSON.stringify({ ts: Date.now(), data })); } catch {}
 };
 
-export default function CallHistoryByPhoneModal({
+export default function CallHistoryByClientModal({
   isOpen,
   onClose,
-  numero,
-  titleSuffix = ""
+  clientId,
+  titleSuffix = "",
+  fallbackPhone = ""
 }) {
-  const normalizedNumero = (numero || "").replace(/\D/g, "").trim();
-
   /* ---------- table data ---------- */
   const [rows, setRows] = useState([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
-  const [sortBy, setSortBy] = useState("Date");  // Date|Heure|IDAppel|Duree_Appel|Type_Appel
-  const [sort, setSort]   = useState("desc");    // asc|desc
+  const [sortBy, setSortBy] = useState("Date");
+  const [sort, setSort]   = useState("desc");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
@@ -72,10 +73,10 @@ export default function CallHistoryByPhoneModal({
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [sousStatutOptions, setSousStatutOptions] = useState([]);
-  const [sousStatuts, setSousStatuts] = useState([]); // array de labels
+  const [sousStatuts, setSousStatuts] = useState([]);
   const [clientName, setClientName] = useState("");
-  const [typeAppel, setTypeAppel] = useState(""); // "", "1", "2"
-  const [q, setQ] = useState("");                 // global search
+  const [typeAppel, setTypeAppel] = useState("");
+  const [q, setQ] = useState("");
   const [qDebounced, setQDebounced] = useState("");
 
   // debounce recherche globale
@@ -84,82 +85,67 @@ export default function CallHistoryByPhoneModal({
     return () => clearTimeout(t);
   }, [q]);
 
-  // charger la liste des sous-statuts une fois
- // charger la liste des sous-statuts une fois
-useEffect(() => {
-  let alive = true;
-  (async () => {
-    try {
-      const { data } = await api.get(SOUS_STATUTS_EP);
+  // charger la liste des sous-statuts
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const { data } = await api.get(SOUS_STATUTS_EP);
+        const rawList = Array.isArray(data)
+          ? data.map(item =>
+              typeof item === "string"
+                ? item
+                : (item.Sous_Statut ?? item.sous_statut ?? item.name ?? item.label ?? "")
+            )
+          : (Array.isArray(data?.names) ? data.names : []);
+        const list = Array.from(new Set(rawList.map(s => String(s).trim()).filter(Boolean)));
+        if (alive) setSousStatutOptions(list);
+      } catch (e) {
+        console.error("Erreur chargement sous-statuts:", e);
+        if (alive) setSousStatutOptions([]);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
 
-      // Le backend renvoie: [{ "Sous_Statut": "..." }, ...]
-      const rawList = Array.isArray(data)
-        ? data.map(item =>
-            typeof item === "string"
-              ? item
-              : (item.Sous_Statut ?? item.sous_statut ?? item.name ?? item.label ?? "")
-          )
-        : (Array.isArray(data?.names) ? data.names : []);
+  const filterBundle = useMemo(() => ({
+    dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName, qDebounced
+  }), [dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName, qDebounced]);
 
-      // normaliser (trim) et dédupliquer
-      const list = Array.from(
-        new Set(
-          rawList
-            .map(s => String(s).trim())
-            .filter(Boolean)
-        )
-      );
-
-      if (alive) setSousStatutOptions(list);
-    } catch (e) {
-      console.error("Erreur chargement sous-statuts:", e);
-      if (alive) setSousStatutOptions([]);
-    }
-  })();
-  return () => { alive = false; };
-}, []);
-
-  // build payload & cache key
-  const payload = useMemo(() => ({
-    numero: normalizedNumero,
-    page,
-    limit,
-    sort,
+  const payloadClient = useMemo(() => ({
+    clientId: parseInt(clientId),
+    page, 
+    limit, 
+    sort, 
     sortBy,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
     typeAppel: typeAppel || undefined,
     agentReceptionName: agentReceptionName || undefined,
     agentEmmissionName: agentEmmissionName || undefined,
-    sousStatuts: (sousStatuts && sousStatuts.length
-    ? sousStatuts.map(s => String(s).trim())
-    : undefined),
-  clientName: clientName || undefined,
-  q: qDebounced || undefined,
-}), [
-    normalizedNumero, page, limit, sort, sortBy,
-    dateFrom, dateTo, typeAppel, agentReceptionName,
-    agentEmmissionName, sousStatuts, clientName, qDebounced
-  ]);
+    sousStatuts: (sousStatuts && sousStatuts.length ? sousStatuts.map(s => String(s).trim()) : undefined),
+    clientName: clientName || undefined,
+    q: qDebounced || undefined,
+  }), [clientId, page, limit, sort, sortBy, dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName, qDebounced]);
 
-  const cacheKey = useMemo(
-    () => keyFor(normalizedNumero, page, limit, sortBy, sort, {
-      dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName, qDebounced
-    }),
-    [normalizedNumero, page, limit, sortBy, sort, dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName, qDebounced]
+  const cacheKeyClient = useMemo(
+    () => keyFor(`client:${clientId}`, page, limit, sortBy, sort, filterBundle),
+    [clientId, page, limit, sortBy, sort, filterBundle]
   );
 
-  // fetch avec cache SWR
   const abortRef = useRef(null);
-  const load = async (showSpinnerIfNoCache = true) => {
-    if (!normalizedNumero) return;
+
+  const loadByClient = async (showSpinnerIfNoCache = true) => {
+ // Test  
+ // console.log("Chargement historique client:", clientId, "Payload:", payloadClient);
     setErr("");
 
-    const cached = readCache(cacheKey);
+    const cached = readCache(cacheKeyClient);
     if (cached?.rows) {
       setRows(cached.rows);
       setTotal(cached.total);
       if (!loading) setLoading(false);
+      return;
     } else if (showSpinnerIfNoCache) {
       setLoading(true);
     }
@@ -169,60 +155,139 @@ useEffect(() => {
     abortRef.current = controller;
 
     try {
-      const { data } = await api.post(ENDPOINT, payload, { signal: controller.signal });
+      const { data } = await api.post(EP_BY_CLIENT, payloadClient, { 
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      //Test
+      // console.log("Réponse API historyByClient:", data);
+      
       const rows = Array.isArray(data?.rows) ? data.rows : [];
       const total = Number(data?.total) || 0;
-      writeCache(cacheKey, { rows, total });
+      
+      writeCache(cacheKeyClient, { rows, total });
       setRows(rows);
       setTotal(total);
     } catch (e) {
-      if (e.name !== "AbortError" && e.name !== "CanceledError") {
-        console.error("history load error:", e);
-        setErr("Erreur lors du chargement de l'historique.");
-        if (!cached) { setRows([]); setTotal(0); }
+      console.error("Erreur historyByClient:", e);
+      
+      // Fallback vers l'endpoint par numéro si l'endpoint par client n'existe pas
+      if (e?.response?.status === 404) {
+        const fallback = onlyDigits(fallbackPhone);
+        if (fallback?.length >= 5) {
+          await loadByPhone(fallback, showSpinnerIfNoCache);
+          return;
+        }
+        setErr("Endpoint introuvable (404) et aucun numéro fallback fourni.");
+      } else if (e?.response?.status === 400) {
+        setErr(e?.response?.data?.message || "Requête invalide (400).");
+      } else if (e.name !== "AbortError" && e.name !== "CanceledError") {
+        setErr("Erreur lors du chargement de l'historique (client).");
       }
+      if (!cached) { setRows([]); setTotal(0); }
     } finally {
       setLoading(false);
     }
   };
 
-  // première ouverture + quand numéro change
+  const loadByPhone = async (digits, showSpinnerIfNoCache = true) => {
+    const cacheKeyPhone = keyFor(`num:${digits}`, page, limit, sortBy, sort, filterBundle);
+    const payloadPhone = {
+      numero: digits,
+      page, limit, sort, sortBy,
+      dateFrom: dateFrom || undefined,
+      dateTo: dateTo || undefined,
+      typeAppel: typeAppel || undefined,
+      agentReceptionName: agentReceptionName || undefined,
+      agentEmmissionName: agentEmmissionName || undefined,
+      sousStatuts: (sousStatuts && sousStatuts.length ? sousStatuts.map(s => String(s).trim()) : undefined),
+      clientName: clientName || undefined,
+      q: qDebounced || undefined,
+    };
+
+    const cached = readCache(cacheKeyPhone);
+    if (cached?.rows) {
+      // Filtrer les résultats en cache pour ce client spécifique
+      const filteredRows = cached.rows.filter(row => 
+        row.Client && row.Client.IDClient === parseInt(clientId)
+      );
+      setRows(filteredRows);
+      setTotal(filteredRows.length);
+      if (!loading) setLoading(false);
+      return;
+    } else if (showSpinnerIfNoCache) {
+      setLoading(true);
+    }
+
+    try {
+      const { data } = await api.post(EP_BY_PHONE, payloadPhone, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const rows = Array.isArray(data?.rows) ? data.rows : [];
+      const total = Number(data?.total) || 0;
+      
+      // Filtrer les résultats pour n'afficher que ceux du client spécifique
+      const filteredRows = rows.filter(row => 
+        row.Client && row.Client.IDClient === parseInt(clientId)
+      );
+      
+      writeCache(cacheKeyPhone, { rows: filteredRows, total: filteredRows.length });
+      setRows(filteredRows);
+      setTotal(filteredRows.length);
+      setErr("");
+    } catch (e) {
+      console.error("Erreur historyByPhone:", e);
+      if (e?.response?.status === 404) {
+        setErr("Aucun historique trouvé pour ce numéro (404).");
+      } else if (e?.response?.status === 400) {
+        setErr(e?.response?.data?.message || "Requête invalide (400) côté numéro.");
+      } else if (e.name !== "AbortError" && e.name !== "CanceledError") {
+        setErr("Erreur lors du chargement de l'historique (numéro).");
+      }
+      setRows([]); 
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ouverture + changement de client
   useEffect(() => {
     if (!isOpen) return;
     setPage(1);
-    load(true);
-    return () => { if (abortRef.current) abortRef.current.abort(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, normalizedNumero]);
+    loadByClient(true);
+    return () => { 
+      if (abortRef.current) {
+        abortRef.current.abort();
+      }
+    };
+  }, [isOpen, clientId]);
 
   // recharger quand qDebounced change
   useEffect(() => {
     if (!isOpen) return;
     setPage(1);
-    load(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadByClient(true);
   }, [qDebounced]);
 
-  // revalidation quand on change page/limit/sort
+  // revalidation quand on change page/limit/sort/filters
   useEffect(() => {
     if (!isOpen) return;
-    load(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadByClient(true);
   }, [page, limit, sort, sortBy, dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName]);
-
-  // revalidation douce quand l’onglet redevient visible
-  useEffect(() => {
-    const onVis = () => { if (document.visibilityState === "visible" && isOpen) load(false); };
-    document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, [isOpen]);  
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   const [commentOpen, setCommentOpen] = useState(false);
   const [selectedComment, setSelectedComment] = useState("");
 
-  const handleApply = () => { setPage(1); load(true); };
+  const handleApply = () => { setPage(1); loadByClient(true); };
   const handleReset = () => {
     setAgentReceptionName("");
     setAgentEmmissionName("");
@@ -234,7 +299,7 @@ useEffect(() => {
     setQ("");
     setQDebounced("");
     setPage(1);
-    load(true);
+    loadByClient(true);
   };
 
   const toggleSort = (col) => {
@@ -252,15 +317,19 @@ useEffect(() => {
       {children} {sortBy === col ? (sort === "asc" ? "▲" : "▼") : ""}
     </th>
   );
+
   const { getBadgeColor } = useBadgeColor();
 
   return (
     <Modal isOpen={isOpen} toggle={onClose} size="xl">
       <ModalHeader toggle={onClose}>
-        Historique des appels — N° {titleSuffix || formatPhoneNumber(numero)}
+        Historique des appels — {titleSuffix ? `${titleSuffix} ` : ""}(Client #{clientId})
+        {err && err.includes("fallback") && (
+          <small className="text-muted d-block">[Mode fallback par numéro]</small>
+        )}
       </ModalHeader>
-      <ModalBody>
 
+      <ModalBody>
         {/* Barre du haut : recherche / filtres / taille page */}
         <div className="d-flex justify-content-between align-items-center mb-2">
           <div>
@@ -297,9 +366,9 @@ useEffect(() => {
                 setPage(1);
               }}
             >
-              <option>10</option>
-              <option>20</option>
-              <option>50</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
             </select>
           </div>
         </div>
@@ -429,7 +498,7 @@ useEffect(() => {
                   {rows.length === 0 ? (
                     <tr>
                       <td colSpan="11" className="text-center text-muted">
-                        Aucun appel.
+                        Aucun appel trouvé pour ce client.
                       </td>
                     </tr>
                   ) : (
@@ -437,10 +506,10 @@ useEffect(() => {
                       <tr key={r.IDAppel}>
                         <td>{r.Date ? new Date(r.Date).toLocaleDateString() : "—"}</td>
                         <td>{r.Heure || "—"}</td>
-                        <td>{r.Type_Appel|| "—"}</td>
+                        <td>{r.Type_Appel || "—"}</td>
                         <td>{fmtDuree(r.Duree_Appel)}</td>
                         <td>{formatPhoneNumber(r.Numero) || "—"}</td>
-                        <td><Badge  color={getBadgeColor(r.Sous_Statut)}>{r.Sous_Statut || "—"}</Badge></td>
+                        <td><Badge color={getBadgeColor(r.Sous_Statut)}>{r.Sous_Statut || "—"}</Badge></td>
 
                         <td>
                           {r.Agent_Emmission ? (

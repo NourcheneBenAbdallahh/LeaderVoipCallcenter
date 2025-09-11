@@ -1,5 +1,7 @@
 import express from "express";
-import { latestByPhone, historyByPhone } from "../controllers/dernierControllers.js";
+import { latestByPhone, historyByPhone
+    ,historyByClient
+ } from "../controllers/dernierControllers.js";
 
 const router = express.Router();
 
@@ -14,5 +16,8 @@ router.post("/appels/latestByPhone", latestByPhone);
  * Body: { "numero": "0892470506", "page": 1, "limit": 10, "sort": "desc" }
  */
 router.post("/appels/historyByPhone", historyByPhone);
+
+
+router.post("/appels/historyByClient", historyByClient);
 
 export default router;

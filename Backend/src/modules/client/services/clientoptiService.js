@@ -70,9 +70,10 @@ export async function findClientsPaginated(params = {}) {
     const [rows] = await pool.query(
       `
       SELECT
-        IDClient, Nom, Prenom, Telephone, Email,
+        IDClient, Nom, Prenom, Telephone,Mobile, Email,
         Adresse, CodePostal, Ville,
         NB_appel_Emis, NB_Appel_Recu,
+         Cumul_temps,
         Sous_Statut
       FROM Client
       ${whereSql}

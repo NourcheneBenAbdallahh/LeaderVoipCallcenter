@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Container, Row, Col, Card, CardBody, Spinner } from "reactstrap";
-import Header from "components/Headers/Header.js";
 import AppelsTable from "./AppelsTable.jsx";
 import FiltersDrawer from "./FiltersDrawer.jsx";
 import FilterChips from "./FilterChips.jsx";
@@ -9,6 +8,8 @@ import AppelsControls from "./AppelsControls.jsx";
 import { useJournalAppelsData } from "./hooks/useJournalAppelsData.jsx";
 import useBadgeColor from "utils/useBadgeColor.js";
 import api from "api";
+import HeaderDeuxCards from "components/Headers/HeaderTwoCards.js";
+import AffecterModal from "../clients/Affectation/AffecterModal.jsx";
 
 const TTL = 5 * 60 * 1000; // 5 min
 const CK_AGENTS      = "journal:agents:v1";
@@ -32,7 +33,7 @@ const toKey = (v) => (v == null ? "" : String(v).trim());
 
 const JournalAppels = () => {
   const {
-    rows, total, loading, page, limit, sortBy, sortDir, filters,
+   rows, total, loading, page, limit, sortBy, sortDir, filters,
     setPage, applyFilters, clearOneFilter, resetAll, handleSort,
     avgDurationLabel
   } = useJournalAppelsData();
@@ -49,6 +50,23 @@ const JournalAppels = () => {
     else setSelectedRows([]);
   };
 
+  /* ========== Affectation ========= */
+  const [affModalOpen, setAffModalOpen] = useState(false);
+  const [clientToAffect, setClientToAffect] = useState(null);
+
+  const handleOpenAffecter = (clientObj) => {
+setClientToAffect(Array.isArray(clientObj) ? clientObj : [clientObj]);
+    setAffModalOpen(true);
+  };
+  const handleCloseAffecter = () => {
+    setAffModalOpen(false);
+    setClientToAffect(null);
+  };
+  const handleAffectationSuccess = () => {
+    // après succès, on force un refresh (au besoin)
+    setPage(1);
+  };
+
   /* =============== AGENTS (émission) =============== */
   const [agents, setAgents] = useState([]);
   useEffect(() => {
@@ -62,12 +80,8 @@ const JournalAppels = () => {
         const raw = Array.isArray(data?.agents) ? data.agents : (Array.isArray(data) ? data : []);
         const list = raw
           .map(a => {
-            const id =
-              a.IDAgent_Emmission ?? a.IDAgent_Reception ?? a.IDAgent ?? a.id ?? a.ID;
-            const nom =
-              `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() ||
-              a.Login ||
-              (id != null ? `Agent ${id}` : "");
+            const id = a.IDAgent_Emmission ?? a.IDAgent_Reception ?? a.IDAgent ?? a.id ?? a.ID;
+            const nom = `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() || a.Login || (id != null ? `Agent ${id}` : "");
             return { id: toKey(id), nom };
           })
           .filter(a => a.id !== "" && a.nom !== "");
@@ -80,7 +94,6 @@ const JournalAppels = () => {
 
     return () => { alive = false; };
   }, []);
-
   const agentNameById = Object.fromEntries((agents || []).map(a => [a.id, a.nom]));
 
   /* ============ AGENTS Réception ============ */
@@ -114,7 +127,6 @@ const JournalAppels = () => {
 
     return () => { alive = false; };
   }, []);
-
   const agentReceptionNameById = Object.fromEntries((agentsRecep || []).map(a => [a.id, a.nom]));
 
   /* ==================== CLIENTS ==================== */
@@ -130,7 +142,7 @@ const JournalAppels = () => {
         const list = (Array.isArray(res.data) ? res.data : [])
           .map(c => ({
             id: c.IDClient ?? c.id ?? c.ID,
-            nom: `${c.Prenom ?? ""} ${c.Nom ?? ""}`.trim() || c.RaisonSociale || `Client ${c.IDClient ?? c.id ?? ""}`,
+            nom: `${c.Prenom ?? ""} ${c.Nom ?? ""}`.trim() || c.Civilite || `Client ${c.IDClient ?? c.id ?? ""}`,
           }))
           .filter(c => c.id != null);
         if (alive) { setClients(list); writeList(CK_CLIENTS, list); }
@@ -142,74 +154,86 @@ const JournalAppels = () => {
 
     return () => { alive = false; };
   }, []);
-
   const clientNameById = Object.fromEntries((clients || []).map(c => [c.id, c.nom]));
+
   const { getBadgeColor } = useBadgeColor();
 
-  return (
-    <>
-      <Header
-        title="Journal des appels"
-        totalClients={total}
-        name1="Total Appels"
-        name2="Durée moyenne"
-        totalAppelsEmis={`${avgDurationLabel}`}
-      />
+ return (
+  <>
+    <HeaderDeuxCards
+      title="Journal des appels"
+      name1="Total Appels"
+      value1={total}
+      name2="Durée moyenne"
+      value2={avgDurationLabel}
+    />
 
-      <Container className="mt-[-3rem]" fluid>
-        <Row>
-          <Col>
-            <Card className="shadow">
-              <AppelsControls
-                onOpenFilters={toggleDrawer}
-                onReset={resetAll}
-                searchValue={filters.q}
-                onSearchChange={(val) => applyFilters({ ...filters, q: val })}
-              />
-              <CardBody>
-                <FilterChips filters={filters} onRemove={clearOneFilter} />
+    <Container className="mt-[-3rem]" fluid>
+      <Row>
+        <Col>
+          <Card className="shadow">
+            <AppelsControls
+              onOpenFilters={() => setDrawerOpen(true)}
+              onReset={resetAll}
+              searchValue={filters.q}
+              onSearchChange={(val) => applyFilters({ ...filters, q: val })}
+            />
+            <CardBody>
+              <FilterChips filters={filters} onRemove={clearOneFilter} />
 
-                {loading ? (
-                  <div className="text-center my-4">
-                    <Spinner color="primary" /> Chargement…
-                  </div>
-                ) : (
-                  <>
-                    <AppelsTable
-                      data={rows}
-                      sortBy={sortBy}
-                      sortDir={sortDir}
-                      onSort={handleSort}
-                      getBadgeColor={getBadgeColor}
-                      clientNameById={clientNameById}
-                      agentReceptionNameById={agentReceptionNameById}
-                      agentNameById={agentNameById}
-                      selectedRows={selectedRows}
-                      onSelectRow={handleSelectRow}
-                      onSelectAll={handleSelectAll}
-                    />
-                    <ClientPagination
-                      currentPage={page}
-                      totalClients={total}
-                      clientsPerPage={limit}
-                      setCurrentPage={setPage}
-                    />
-                  </>
-                )}
-              </CardBody>
-            </Card>
-          </Col>
-        </Row>
-      </Container>
+              {loading ? (
+                <div className="text-center my-4">
+                  <Spinner color="primary" /> Chargement…
+                </div>
+              ) : (
+                <>
+                  <AppelsTable
+                    data={rows}
+                    sortBy={sortBy}
+                    sortDir={sortDir}
+                    onSort={handleSort}
+                    getBadgeColor={getBadgeColor}
+                    clientNameById={clientNameById}
+                    agentReceptionNameById={agentReceptionNameById}
+                    agentNameById={agentNameById}
+                    selectedRows={selectedRows}
+                    onSelectRow={handleSelectRow}
+                    onSelectAll={handleSelectAll}
+                    onAffecter={handleOpenAffecter} 
+                  />
 
-      <FiltersDrawer
-        isOpen={drawerOpen}
-        toggle={toggleDrawer}
-        value={filters}
-        onApply={applyFilters}
-      />
-    </>
-  );
+                  <AffecterModal
+                    isOpen={affModalOpen}
+                    onClose={handleCloseAffecter}
+                    clients={clientToAffect || []}        
+                    onSuccess={handleAffectationSuccess}
+                  />
+
+                  <ClientPagination
+                    currentPage={page}
+                    totalClients={total}
+                    clientsPerPage={limit}
+                    setCurrentPage={setPage}
+                  />
+                </>
+              )}
+            </CardBody>
+          </Card>
+        </Col>
+      </Row>
+    </Container>
+
+    <FiltersDrawer
+      isOpen={drawerOpen}
+      toggle={() => setDrawerOpen(false)}
+      value={filters}
+      onApply={applyFilters}
+      agents={agents}
+      agentsRecep={agentsRecep}
+      clients={clients}
+    />
+  </>
+);
 };
 
 export default JournalAppels;

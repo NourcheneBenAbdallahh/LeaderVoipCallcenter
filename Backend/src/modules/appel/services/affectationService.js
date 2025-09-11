@@ -1,5 +1,4 @@
 import  pool  from "../../../config/db.js";
-import db from "../../../config/db.js";
 // Vérifie si un agent existe
 export async function findAgentById(idAgent) {
   const [rows] = await pool.query("SELECT * FROM Agent WHERE IDAgent_Emmission = ?", [idAgent]);
@@ -37,14 +36,14 @@ export async function creerAppel({ idClient, idAgent, typeAgent, date, commentai
   const values = [
     dateSQL,
     heure,
-    "0",
+    "1",
     0,
     commentaire || "",
     client.Telephone || "",
     idClient,
-    typeAgent === "reception" ? idAgent : null,
-    typeAgent === "emission" ? idAgent : null,
-    "À appeler"
+    typeAgent === "reception" ? idAgent : 0,
+    typeAgent === "emission" ? idAgent : 0,
+    "Aappeler"
   ];
 
   const [result] = await pool.query(sql, values);
@@ -55,7 +54,7 @@ console.log("Client récupéré :", client);
     IDClient: idClient,
     IDAgent: idAgent,
     typeAgent,
-    Sous_Statut: "À appeler",
+    Sous_Statut: "Aappeler",
     Date: dateSQL,
     Heure: heure
   };

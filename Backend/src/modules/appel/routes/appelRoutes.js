@@ -12,6 +12,15 @@ import { getAppelsAujourdHui, getAppelsHier } from "../controllers/countappelCon
 
 import { getJournalAppelsOpti, getJournalAppelsAggregatesController } from "../controllers/appeloptiController.js";
 
+
+
+
+import {
+  getClientLastCalls,
+  getClientLastCallsAggregates,
+  getSingleClientLastCall,
+} from "../controllers/latestPerClientController.js";
+
 const router = express.Router();
 
 router.get("/appels", getAllAppels);
@@ -40,7 +49,18 @@ router.get("/recents", getDerniersAppelsController);
 
 
 //VersionOptimisé
+//cest Historiques appels de Journals Appels qui rend tout les appels
 router.get("/journalappels/opti", getJournalAppelsOpti);
+
 router.get("/journalappels/opti/aggregates", getJournalAppelsAggregatesController);
+
+
+
+// Nouveau endpoint
+// GET /api/journalappels/latest-per-client
+router.get("/last-calls", getClientLastCalls);
+router.get("/last-calls/aggregates", getClientLastCallsAggregates);
+router.get("/:idClient/last-call", getSingleClientLastCall);
+
 
 export default router;

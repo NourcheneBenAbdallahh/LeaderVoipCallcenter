@@ -1,4 +1,3 @@
-// src/views/agents/AgentTableComponent.jsx
 import React from "react";
 import { Table, Button, Badge } from "reactstrap";
 import { FaClipboard } from "react-icons/fa";

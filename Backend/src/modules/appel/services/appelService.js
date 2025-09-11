@@ -11,7 +11,7 @@ export async function findAllAppels(limit = 300) {
 
 export async function findAppelSelectedStatut() {
   const [rows] = await pool.query(
-    "SELECT * FROM `Appel` WHERE TRIM(`Sous_Statut`) <> 'À appeler' OR `Sous_Statut` IS NULL"
+    "SELECT * FROM `Appel` WHERE TRIM(`Sous_Statut`) <> 'Aappeler' OR `Sous_Statut` IS NULL"
   );
   return rows;
 }
@@ -80,11 +80,11 @@ export async function getFilteredJournalAppels(filters = {}) {
   return rows;
 }
 
-/**  les appels "À appeler" */
+/**  les appels "Aappeler" */
 export async function findAppelsAAppeler() {
   const [rows] = await pool.query(`
     SELECT * FROM \`Appel\`
-    WHERE TRIM(\`Sous_Statut\`) = 'À appeler'
+    WHERE TRIM(\`Sous_Statut\`) = 'Aappeler'
     ORDER BY Date DESC, Heure DESC
   `);
   return rows;

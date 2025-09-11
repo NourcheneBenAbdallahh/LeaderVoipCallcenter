@@ -156,9 +156,10 @@ const AffectationTable = ({
       >
         {getInitials(agentNameById[r.IDAgent_Emmission])}
       </span>
-      <small className="text-muted d-inline-block text-truncate" style={{ maxWidth: 180 }}>
-        {agentNameById[r.IDAgent_Emmission]}
-      </small>
+    
+
+            <span className="font-weight-bold"> {agentNameById[r.IDAgent_Emmission]}</span>
+
     </Link>
   ) : (
     "—"
@@ -179,7 +180,6 @@ const AffectationTable = ({
         })}
       </tbody>
     </Table>
-     {/* Modal en dehors du tableau */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(false)}>
         <ModalHeader toggle={() => setModalOpen(false)}>Commentaire</ModalHeader>
         <ModalBody>{commentContent}</ModalBody>

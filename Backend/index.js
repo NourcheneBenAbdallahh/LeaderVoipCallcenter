@@ -12,6 +12,9 @@ import agentReceptionRoutes from "./src/modules/agentReception/routes/agentRecep
 import JournalRoutes from "./src/modules/journalAppelAffetation/routes/JournalRoutes.js";
 import authRoutes from "./src/modules/auth/routes/authRoutes.js";
 import dernierRoutes from "./src/modules/dernierAppel/routes/dernierRoutes.js";
+import dernierClientRoutes from "./src/modules/dernierAppelParClient/routes/dernierClientRoutes.js";
+
+import lastCallFiltersRoutes from "./src/modules/lastCallsFiltres/routes/lastCallFiltersRoutes.js";
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -41,6 +44,9 @@ app.use("/api", sousStatutRoutes);
 app.use("/api", JournalRoutes);
 app.use("/auth", authRoutes);
 app.use("/api", dernierRoutes);
+app.use("/api", dernierClientRoutes);
+app.use("/api", lastCallFiltersRoutes);
+
 
 const PORT = Number(process.env.PORT || 5000);
 

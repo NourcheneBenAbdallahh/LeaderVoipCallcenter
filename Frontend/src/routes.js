@@ -7,6 +7,7 @@ import JournalAppels from "views/journalAppel/JournalAppels";
 import AgentsReception from "views/agentsreceptions/AgentsReception";
 import AppelsAffectation from "views/affectationAppel/AppelsAffectation";
 import DernierAppelClient from "views/dernierAppels/DernierAppelClient";
+import ClientPhoneSearch from "views/dernierAppelParClient/ClientPhoneSearch";
 
 var routes = [
   {
@@ -52,9 +53,9 @@ icon: "ni ni-mobile-button text-success",
     layout: "/admin",
   },  {
     path: "/DernierAppel",
-    name: "Dernier Appels",
+    name: "Dernier.App Client ",
 icon: "ni ni-mobile-button text-success",
-    component: <DernierAppelClient />,
+    component: <ClientPhoneSearch />,
     layout: "/admin",
   },
   /*

@@ -86,7 +86,7 @@ const AppelsAffectation = () => {
         const list = (Array.isArray(res.data) ? res.data : [])
           .map(c => ({
             id: c.IDClient ?? c.id,
-            nom: `${c.Prenom ?? ""} ${c.Nom ?? ""}`.trim() || c.RaisonSociale || `Client ${c.IDClient ?? c.id ?? ""}`,
+            nom: `${c.Prenom ?? ""} ${c.Nom ?? ""}`.trim() || c.Civilite || `Client ${c.IDClient ?? c.id ?? ""}`,
           }))
           .filter(c => c.id != null);
         if (alive) setClients(list);
@@ -103,7 +103,7 @@ const AppelsAffectation = () => {
 
   // couleurs badge
 
-  const statuts = [{ value: "À APPELER", label: "À APPELER" }];
+  const statuts = [{ value: "Aappeler", label: "Aappeler" }];
 
   const handleRemoveChip = (key) => applyFilters({ [key]: "", page: 1 });
 

@@ -1,4 +1,3 @@
-// src/views/agentsReception/AgentsReception.jsx
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import api from "api";
 import {
@@ -11,9 +10,9 @@ import ClientSearchBar from "../clients/ClientSearchBarComponent";
 import ClientPagination from "../clients/ClientPaginationComponent";
 import { useLocation } from "react-router-dom";
 
-/* ===========================
+/*
    Config cache & revalidation
-   =========================== */
+    */
 const CACHE_KEY_DATA = "agentsReception:list:v1";  // données API
 const CACHE_KEY_UI   = "agentsReception:ui:v1";    // recherche + page
 const SCROLL_KEY     = "agentsReception:scrollY";  // position scroll
@@ -34,9 +33,9 @@ function quickSignature(arr) {
   return `${n}:${hash}`;
 }
 
-/* ================
+/* 
    Helpers storage
-   ================ */
+   */
 function readDataCache() {
   try {
     const raw = sessionStorage.getItem(CACHE_KEY_DATA);

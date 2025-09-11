@@ -1,45 +1,45 @@
-// src/views/clients/AffecterModal.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Modal, ModalHeader, ModalBody, ModalFooter,
-  Button, Row, Col, FormGroup, Label, Input, Spinner
+  Button, Row, Col, FormGroup, Label, Input, Spinner, FormFeedback
 } from "reactstrap";
 import api from "api";
-//const API = "http://localhost:5000/api";
 
 const API = "/api";
+
+// petites initiales
+const initialsOf = (prenom = "", nom = "") =>
+  `${String(prenom).trim()[0] || ""}${String(nom).trim()[0] || ""}`.toUpperCase() || "•";
 
 export default function AffecterModal({
   isOpen,
   onClose,
-  client,            // objet client ou au moins { IDClient }
-  onSuccess,         // callback après succès (ex: refetch, toast...)
+  clients = [],   // [{IDClient, Prenom, Nom}]
+  onSuccess,
 }) {
-  // état des agents
+  /* ========== état agents (ÉMISSION uniquement) ========== */
   const [agents, setAgents] = useState([]);
   const [loadingAgents, setLoadingAgents] = useState(false);
   const [errAgents, setErrAgents] = useState("");
 
-  // form local
+  /* ========== form ========== */
   const [idAgent, setIdAgent] = useState("");
-  const [typeAgent, setTypeAgent] = useState("emission"); // "emission" | "reception"
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10)); // yyyy-mm-dd
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [commentaire, setCommentaire] = useState("");
 
-  const idClient = useMemo(() => client?.IDClient ?? "", [client]);
+  const firstInvalidRef = useRef(null);
 
-  // (re)initialise le form quand on ouvre
+  /* reset à l’ouverture */
   useEffect(() => {
-    if (isOpen) {
-      setIdAgent("");
-      setTypeAgent("emission");
-      setDate(new Date().toISOString().slice(0, 10));
-      setCommentaire("");
-      setErrAgents("");
-    }
+    if (!isOpen) return;
+    setIdAgent("");
+    setDate(new Date().toISOString().slice(0, 10));
+    setCommentaire("");
+    setErrAgents("");
+    setTouched({ agent: false, date: false, commentaire: false });
   }, [isOpen]);
 
-  // charge la liste des agents à l'ouverture et quand le type change
+  /* charger la liste des AGENTS D'ÉMISSION uniquement */
   useEffect(() => {
     if (!isOpen) return;
     let alive = true;
@@ -49,44 +49,28 @@ export default function AffecterModal({
         setLoadingAgents(true);
         setErrAgents("");
 
-        const endpoint =
-          typeAgent === "reception" ? `${API}/agentsReception` : `${API}/agents`;
-
-        const { data } = await api.get(endpoint);
-
+        const { data } = await api.get(`${API}/agents`); // <- émission
         const raw = Array.isArray(data?.agents)
           ? data.agents
-          : (Array.isArray(data) ? data : null);
+          : Array.isArray(data) ? data : [];
 
-        if (!raw) {
-          throw new Error(
-            `Format API inattendu pour ${endpoint} : attendu {agents:[...]} ou un tableau`
-          );
-        }
-
-        // Garde uniquement les actifs
-        const activeOnly = raw.filter(x => Number(x?.Etat_Compte) === 1);
-
-        const list = activeOnly
+        const list = raw
+          .filter(x => x?.Etat_Compte == null || Number(x.Etat_Compte) === 1)
           .map(a => {
             const id =
               a.IDAgent_Emmission ??
-              a.IDAgent_Reception ??
-              a.IDAgent ??
-              a.id;
-
-            const nom =
+              a.IDAgent ?? a.id ?? a.ID;
+            const nomAff =
               `${a.Prenom ?? ""} ${a.Nom ?? ""}`.trim() ||
               a.Login ||
-              `Agent ${id ?? ""}`;
-
-            return { id, nom };
+              `Agent ${id}`;
+            return { id, nom: nomAff };
           })
           .filter(a => a.id != null);
 
         if (alive) setAgents(list);
       } catch (e) {
-        console.error("Erreur chargement agents:", e);
+        console.error("Erreur chargement agents (émission):", e);
         if (alive) {
           setErrAgents("Impossible de charger la liste des agents.");
           setAgents([]);
@@ -97,84 +81,150 @@ export default function AffecterModal({
     })();
 
     return () => { alive = false; };
-  }, [isOpen, typeAgent]);
+  }, [isOpen]);
 
+  /* validation */
   const [submitting, setSubmitting] = useState(false);
-  const canSubmit = idClient && idAgent && typeAgent && date && !submitting;
+  const [touched, setTouched] = useState({ agent: false, date: false, commentaire: false });
 
-  // date min = aujourd'hui
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0,0,0,0);
   const todayStr = today.toISOString().split("T")[0];
 
-  const handleSubmit = async () => {
-    if (!canSubmit) return;
+  const isAgentInvalid = !idAgent;
+  const isDateInvalid = !date || new Date(date) < today;
+  const isComInvalid = !commentaire || commentaire.trim().length < 3;
 
-    // Validation de la date (>= aujourd'hui)
-    const selectedDate = new Date(date);
-    if (selectedDate < today) {
-      alert("La date sélectionnée doit être aujourd'hui ou une date future.");
+  const canSubmit =
+    clients.length > 0 &&
+    !isAgentInvalid && !isDateInvalid && !isComInvalid &&
+    !submitting;
+
+  const markAllTouched = () =>
+    setTouched({ agent: true, date: true, commentaire: true });
+
+  const handleSubmit = async () => {
+    if (!canSubmit) {
+      markAllTouched();
+      setTimeout(() => {
+        if (firstInvalidRef.current) firstInvalidRef.current.focus();
+      }, 0);
       return;
     }
 
     try {
       setSubmitting(true);
-      await api.post(`${API}/journalappels/affecter`, {
-        idClient: Number(idClient),
-        idAgent: Number(idAgent),
-        typeAgent, // "emission" ou "reception"
-        date,      // "YYYY-MM-DD"
-        commentaire: commentaire?.trim() || null,
-      });
+      await Promise.all(
+        clients.map(c =>
+          api.post(`${API}/journalappels/affecter`, {
+            idClient: Number(c.IDClient),
+            idAgent: Number(idAgent),
+            typeAgent: "emission",       // <— forcer émission
+            date,                         // "YYYY-MM-DD"
+            commentaire: commentaire.trim(),
+          })
+        )
+      );
+
       onSuccess && onSuccess();
       onClose && onClose();
     } catch (e) {
       console.error("Erreur affectation:", e);
-      alert("Échec de l’affectation. Vérifie les champs et réessaie.");
+      const msg = e?.response?.data?.message || "Échec de l’affectation. Vérifie les champs et réessaie.";
+      alert(msg);
     } finally {
       setSubmitting(false);
     }
   };
 
+  /* rendu */
   return (
     <Modal isOpen={isOpen} toggle={onClose} centered size="lg">
-      <ModalHeader toggle={onClose}>Affecter un appel</ModalHeader>
+      <ModalHeader toggle={onClose}>Affecter (Émission)</ModalHeader>
+
       <ModalBody>
-        <Row>
-          <Col md="6">
-            <FormGroup>
-              <Label>ID Client</Label>
-              <Input value={idClient} readOnly />
-            </FormGroup>
-          </Col>
-          <Col md="6">
-            <FormGroup>
-              <Label>Type Agent</Label>
-              <Input
-                type="select"
-                value={typeAgent}
-                onChange={(e) => {
-                  setTypeAgent(e.target.value);
-                  setIdAgent(""); // reset l’agent si on change de type
+        {/* --- Clients sélectionnés --- */}
+        <div className="mb-3 pb-2" style={{ borderBottom: "1px solid #eee" }}>
+          {clients.length === 0 ? (
+            <div className="text-danger d-flex align-items-center">
+              <span className="mr-2">⚠</span> Aucun client sélectionné
+            </div>
+          ) : (
+            <>
+              <div className="text-muted mb-2">
+                <strong>{clients.length}</strong> client{clients.length > 1 ? "s" : ""} sélectionné{clients.length > 1 ? "s" : ""}.
+              </div>
+
+              <div
+                style={{
+                  background: "#f9fafb",
+                  border: "1px solid #e6e8eb",
+                  borderRadius: 10,
+                  padding: 10,
+                  maxHeight: 160,
+                  overflowY: "auto"
                 }}
               >
-                <option value="emission">Émission</option>
-                <option value="reception">Réception</option>
-              </Input>
-            </FormGroup>
-          </Col>
-        </Row>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                    gap: 8
+                  }}
+                >
+                  {clients.map((c) => (
+                    <div
+                      key={c.IDClient}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        background: "#fff",
+                        border: "1px solid #e8eaef",
+                        borderRadius: 8,
+                        padding: "8px 10px",
+                        minHeight: 44,
+                        boxShadow: "0 1px 1px rgba(0,0,0,0.02)"
+                      }}
+                      title={`ID #${c.IDClient}`}
+                    >
+                      <div
+                        style={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          background: "#eef2ff",
+                          color: "#3b5bdb",
+                          fontWeight: 700,
+                          fontSize: 12,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexShrink: 0,
+                          border: "1px solid #dde1f3"
+                        }}
+                      >
+                        {initialsOf(c.Prenom, c.Nom)}
+                      </div>
+                      <div style={{ lineHeight: 1.2 }}>
+                        <div style={{ fontWeight: 600, fontSize: 13 }}>
+                          {(c.Prenom || "") + " " + (c.Nom || "")}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
 
+        {/* --- Agent (ÉMISSION) --- */}
         <Row>
           <Col md="6">
             <FormGroup>
-              <Label>
-                Agent ({typeAgent === "reception" ? "Réception" : "Émission"})
-              </Label>
+              <Label>Agent (Émission) <span className="text-danger">*</span></Label>
               {loadingAgents ? (
-                <div className="d-flex align-items-center gap-2">
-                  <Spinner size="sm" /> Chargement des agents…
-                </div>
+                <div className="d-flex align-items-center"><Spinner size="sm" className="mr-2" /> Chargement…</div>
               ) : errAgents ? (
                 <div className="text-danger">{errAgents}</div>
               ) : (
@@ -182,6 +232,10 @@ export default function AffecterModal({
                   type="select"
                   value={idAgent}
                   onChange={(e) => setIdAgent(e.target.value)}
+                  invalid={touched.agent && isAgentInvalid}
+                  innerRef={el => {
+                    if (touched.agent && isAgentInvalid && !firstInvalidRef.current) firstInvalidRef.current = el;
+                  }}
                 >
                   <option value="">— Choisir un agent —</option>
                   {agents.map(a => (
@@ -191,39 +245,49 @@ export default function AffecterModal({
                   ))}
                 </Input>
               )}
-              {!loadingAgents && !errAgents && agents.length === 0 && (
-                <div className="text-muted mt-1">Aucun agent actif disponible.</div>
-              )}
+              <FormFeedback>Veuillez sélectionner un agent.</FormFeedback>
             </FormGroup>
           </Col>
+
           <Col md="6">
             <FormGroup>
-              <Label>Date</Label>
+              <Label>Date <span className="text-danger">*</span></Label>
               <Input
                 type="date"
                 value={date}
+                min={todayStr}
                 onChange={(e) => setDate(e.target.value)}
-                min={todayStr} 
+                invalid={touched.date && isDateInvalid}
               />
+              <FormFeedback>La date doit être aujourd’hui ou ultérieure.</FormFeedback>
             </FormGroup>
           </Col>
         </Row>
 
-        <FormGroup>
-          <Label>Commentaire</Label>
-          <Input
-            type="textarea"
-            rows="3"
-            maxLength={1000}
-            value={commentaire}
-            onChange={(e) => setCommentaire(e.target.value)}
-            placeholder="Notes internes…"
-            required
-          />
-        </FormGroup>
+        {/* --- Commentaire --- */}
+        <Row>
+          <Col md="12">
+            <FormGroup>
+              <Label>Commentaire <span className="text-danger">*</span></Label>
+              <Input
+                type="textarea"
+                rows="3"
+                value={commentaire}
+                onChange={(e) => setCommentaire(e.target.value)}
+                invalid={touched.commentaire && isComInvalid}
+                placeholder="Notes internes…"
+                maxLength={1000}
+              />
+              <FormFeedback>Merci de saisir un commentaire (min. 3 caractères).</FormFeedback>
+            </FormGroup>
+          </Col>
+        </Row>
       </ModalBody>
 
       <ModalFooter>
+        <small className="mr-auto text-muted">
+          <span className="text-danger">*</span> champs obligatoires
+        </small>
         <Button color="secondary" onClick={onClose} disabled={submitting}>
           Annuler
         </Button>

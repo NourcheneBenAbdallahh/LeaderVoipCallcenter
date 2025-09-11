@@ -98,7 +98,7 @@ const DernierAppelClientParNumero = () => {
               <Input
                 type="text"
                 inputMode="tel"
-                placeholder="📞 Numéro client "
+                placeholder="📞 Numéro support "
                 value={numeroInput}
                 onChange={(e) => setNumeroInput(e.target.value)}
               />
@@ -169,7 +169,7 @@ const DernierAppelClientParNumero = () => {
                   <strong>Durée :</strong> {fmtDuree(result.appel.Duree_Appel)}
                 </div>
                 <div className="mr-4 mb-2">
-                  <strong>Numéro :</strong> {formatPhoneNumber(result.appel.Numero) || "—"}
+                  <strong>Numéro Support :</strong> {formatPhoneNumber(result.appel.Numero) || "—"}
                 </div>
                 <div className="mb-2">
                   <strong>Sous Statut :</strong>{" "}
@@ -192,7 +192,7 @@ const DernierAppelClientParNumero = () => {
                   <strong>Agent Réception :</strong>{" "}
                   {result.appel.Agent_Reception ? (
                     <span className="text-success">
-                      {result.appel.Agent_Reception.Prenom} {result.appel.Agent_Reception.Nom}
+                      {result.appel.Agent_Reception.Prenom } {result.appel.Agent_Reception.Nom}
                     </span>
                   ) : (
                     "—"

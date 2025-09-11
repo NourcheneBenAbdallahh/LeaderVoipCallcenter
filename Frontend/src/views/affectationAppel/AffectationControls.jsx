@@ -1,4 +1,3 @@
-// views/appelsAffectation/AffectationControls.jsx
 import React, { useEffect, useRef, useState } from "react";
 import { CardHeader, Button, Input, CustomInput, Label } from "reactstrap";
 
