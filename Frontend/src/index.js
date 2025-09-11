@@ -18,20 +18,35 @@ import RequireAuth from "views/login/RequireAuth";
 import URLMask from "utils/URLMask";
 import RequireRegion from "views/login/RequireRegion";
 import RegionSelect from "views/Region/RegionSelect";
+import RoutePersist from "utils/RoutePersist";
+import DisableCopyPaste from "utils/DisableCopyPaste";
 
+/*
 const Start = () => {
   const hasRegion = !!localStorage.getItem("region");
   return <Navigate to={hasRegion ? "/select-region" : "/select-region"} replace />;
+};
+*/
+
+const Start = () => {
+  const hasRegion = !!localStorage.getItem("region");
+  
+  // Récupérer le dernier chemin visité depuis le localStorage
+  const lastPath = localStorage.getItem('lastPath') || (hasRegion ? "/admin/dashboard" : "/select-region");
+  
+  return <Navigate to={lastPath} replace />;
 };
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
 root.render(
   <BrowserRouter>
+      <RoutePersist /> {/* Ajoutez cette ligne */}
+
     {/* URL visible figée
     /leaderVoipSupport */}
     <URLMask fixed="/" />
-
+    <DisableCopyPaste />
     <Routes>
       {/* Sélection de région */}
       <Route path="/select-region" element={<RegionSelect />} />

@@ -1,14 +1,35 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+// utils/URLMask.js
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
-/** Garde l'URL du navigateur toujours égale à `fixed` */
-export default function URLMask({ fixed = "/app" }) {
+const URLMask = () => {
   const location = useLocation();
+
   useEffect(() => {
-    if (window.location.pathname !== fixed) {
-      window.history.replaceState({}, "", fixed);
+    // Empêcher l'affichage de l'URL dans la barre d'adresse
+    const cleanUrl = window.location.origin + '/';
+    
+    // Masquer immédiatement l'URL
+    if (window.location.href !== cleanUrl) {
+      window.history.replaceState({}, '', cleanUrl);
     }
-    // à chaque changement de route (clé), on re-fixe l'URL
-  }, [location.key, fixed]);
+
+    // Intercepter tous les changements de navigation
+    const handleNavigation = () => {
+      window.history.replaceState({}, '', cleanUrl);
+    };
+
+    // Écouter les événements de navigation
+    window.addEventListener('popstate', handleNavigation);
+    window.addEventListener('hashchange', handleNavigation);
+
+    return () => {
+      window.removeEventListener('popstate', handleNavigation);
+      window.removeEventListener('hashchange', handleNavigation);
+    };
+  }, [location]);
+
   return null;
-}
+};
+
+export default URLMask;
