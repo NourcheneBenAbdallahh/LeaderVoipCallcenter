@@ -1,64 +1,71 @@
 import { useCallback } from "react";
 
-/**
- * Hook qui fournit une fonction getBadgeColor pour les sous-statuts
- */
 export default function useBadgeColor() {
+  const normalize = (v) => {
+    return (v || "")
+      .toString()
+      .normalize("NFD")         // enlève accents
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/\s+/g, "")      // supprime espaces
+      .toUpperCase()
+      .trim();
+  };
+
+  const colorMap = {
+    PROMESSE: "warning",
+
+    RECEPTION: "primary",
+    RECEPTION2023: "primary",
+    RECEPTIONSUITERELANCE: "primary",
+
+    "4H": "danger",         // rouge
+    "PLUS2H": "orange",     // orange (custom si ton thème accepte sinon "warning")
+    "PLUS6H": "secondary",  // gris
+    "6H": "secondary",
+    "8H": "dark",           // noir
+    "12H": "info",          // bleu clair
+    "12HFIXE+PORTABLE": "info",
+
+    RAPPEL: "danger",
+    RAPPEL1: "danger",
+    RAPPEL2: "danger",
+
+    NRP: "dark",
+    NEREPONDPAS: "dark",
+    REFUS: "danger",
+    CLIENTFROID: "secondary",
+
+    RECLAMATION: "info",
+    RECLAMATIONSUITE: "info",
+    RECEPRELANCE: "info",
+    LIGNESUSPENDU: "secondary",
+    LIGNERESTREINTE: "secondary",
+
+    "+75ANS": "success",
+    "+65ANS": "success",
+    OKVALIDE: "success",
+    TRAITE: "success",
+
+    TCHATCHE: "purple",     // violet (tu peux remplacer par "secondary" si pas dispo)
+    "ARAPPELER": "warning",
+    "AAPPELER": "warning",
+
+    "DU10AU20": "light",
+    "DU1ERAU10": "light",
+
+    JUSTE1H: "secondary",
+    JUSTEUNEHEURE: "secondary",
+
+    APPELANNULATION: "danger",
+    DEPASSEMENT: "danger",
+    HORSCIBLE: "secondary",
+    NONVALIDE: "dark",
+    OKNONVALIDE: "dark",
+  };
+
   const getBadgeColor = useCallback((statut) => {
-    switch ((statut || "").toUpperCase()) {
-      case "PROMESSE": return "warning";
-      case "RECEPTION":
-      case "RECEPTION 2023":
-      case "RECEPTION SUITE RELANCE": return "primary";
-
-      case "RAPPEL":
-      case "RAPPEL 1":
-      case "RAPPEL 2": return "danger";
-
-      case "PLUS 2H":
-      case "PLUS 6H":
-      case "4H":
-      case "6H":
-      case "8H":
-      case "12H":
-      case "12H FIXE+PORTABLE":
-      case "12H FIXE + PORTABLE": return "danger";
-
-      case "NRP":
-      case "NE REPOND PAS":
-      case "REFUS":
-      case "CLIENT FROID": return "dark";
-
-      case "RECLAMATION":
-      case "RECLAMATION SUITE":
-      case "RECEP RELANCE":
-      case "LIGNE SUSPENDU":
-      case "LIGNE RESTREINTE": return "info";
-
-      case "+75 ANS":
-      case "+65 ANS":
-      case "OK VALIDE":
-      case "TRAITE": return "success";
-
-      case "TCHATCHE":
-      case "ATTENTE PAYEMENT FACTURE":
-      case "A RAPPELER":
-      case "À APPELER": return "danger";
-
-      case "DU 10 AU 20":
-      case "DU 1ER AU 10": return "light";
-
-      case "JUSTE 1H":
-      case "JUSTE UNE HEURE": return "secondary";
-
-      case "APPEL ANNULATION":
-      case "DEPASSEMENT":
-      case "HORS CIBLE":
-      case "NON VALIDE":
-      case "OK NON VALIDE": return "warning";
-
-      default: return "secondary";
-    }
+    const key = normalize(statut);
+    return colorMap[key] || "secondary"; // couleur par défaut
   }, []);
 
   return { getBadgeColor };

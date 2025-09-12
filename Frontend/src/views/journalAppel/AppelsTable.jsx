@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Table, Badge, Modal, ModalHeader, ModalBody, Button } from "reactstrap";
 import { Link } from "react-router-dom";
+import CallHistoryByClientModal from "../dernierAppelParClient/CallHistoryByClientModal"; // <-- ajuste le chemin si besoin
 
 /* ---------- utils ---------- */
 const fmtDuree = (secs) => {
@@ -10,6 +11,8 @@ const fmtDuree = (secs) => {
   const s = n % 60;
   return `${h}h ${m}min ${s}s`;
 };
+
+const onlyDigits = (v) => (v || "").replace(/\D/g, "").trim();
 
 const SortHeader = ({ label, col, sortBy, sortDir, onSort }) => {
   const active = sortBy === col;
@@ -64,6 +67,11 @@ const AppelsTable = ({
   const [modalOpen, setModalOpen] = useState(false);
   const [commentContent, setCommentContent] = useState("");
 
+  // --- ÉTAT pour l’historique (même logique que ClientPhoneSearch.jsx) ---
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [fallbackPhone, setFallbackPhone] = useState("");
+
   const handleCommentClick = (comment) => {
     setCommentContent(comment);
     setModalOpen(true);
@@ -74,6 +82,19 @@ const AppelsTable = ({
     const fullName = clientNameById?.[row.IDClient] || "";
     const { Nom, Prenom } = splitNomComplet(fullName);
     onAffecter([{ IDClient: row.IDClient, Nom, Prenom }]);
+  };
+
+  // --- Ouvre l’historique client (copie/adaptation de ClientPhoneSearch.jsx) ---
+  const openHistoryClient = (client, appel) => {
+    if (!client?.IDClient) {
+      console.error("IDClient manquant:", client);
+      return;
+    }
+    const raw = (appel && appel.Numero) || client?.Mobile || client?.Telephone || "";
+    const fb = onlyDigits(raw);
+    setSelectedClient({ ...client, __fallbackPhone: fb });
+    setFallbackPhone(fb);
+    setIsHistoryOpen(true);
   };
 
   return (
@@ -99,6 +120,7 @@ const AppelsTable = ({
             <SortHeader label="Agent Émiss." col="IDAgent_Emmission" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             <SortHeader label="Sous Statut" col="Sous_Statut" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
             <th className="px-4 py-2">Actions</th>
+            <th className="px-4 py-2">Historique</th>
           </tr>
         </thead>
 
@@ -107,6 +129,16 @@ const AppelsTable = ({
             const isDernier = r.IDAppel === dernierAppel?.IDAppel;
             const isSelected = selectedRows.includes(r.IDAppel);
             const canAffect = !!r.IDClient && !!clientNameById?.[r.IDClient];
+
+            // Construit l’objet client minimal pour le modal
+            const clientFullName = r.IDClient ? clientNameById[r.IDClient] : "";
+            const { Nom, Prenom } = splitNomComplet(clientFullName);
+            const clientMin = r.IDClient
+              ? { IDClient: r.IDClient, Nom, Prenom }
+              : null;
+
+            // Construit l’objet appel minimal (le modal a besoin surtout de Numero)
+            const appelMin = { Numero: r.Numero || "" };
 
             return (
               <tr
@@ -217,39 +249,66 @@ const AppelsTable = ({
                     Affecter
                   </Button>
                 </td>
+
+                <td className="px-4 py-2">
+                  <Button
+                    color="primary"
+                    size="sm"
+                    onClick={() => clientMin && openHistoryClient(clientMin, appelMin)}
+                    disabled={!clientMin}
+                    title={clientMin ? "Voir historique (client)" : "Client inconnu"}
+                  >
+                    Voir historique (client)
+                  </Button>
+                </td>
               </tr>
             );
           })}
         </tbody>
       </Table>
-<div className="d-flex justify-content-end mb-2">
-  <Button
-    color="primary"
-    size="sm"
-    disabled={selectedRows.length === 0}
-    onClick={() => {
-      const selectedClients = data
-        .filter((r) => selectedRows.includes(r.IDAppel) && r.IDClient && clientNameById?.[r.IDClient])
-        .map((r) => {
-          const fullName = clientNameById[r.IDClient];
-          const { Nom, Prenom } = splitNomComplet(fullName);
-          return { IDClient: r.IDClient, Nom, Prenom };
-        });
 
-      if (onAffecter) {
-        onAffecter(selectedClients);
-      }
-    }}
-  >
-    Affecter la sélection ({selectedRows.length})
-  </Button>
-</div>
+      <div className="d-flex justify-content-end mb-2">
+        <Button
+          color="primary"
+          size="sm"
+          disabled={selectedRows.length === 0}
+          onClick={() => {
+            const selectedClients = data
+              .filter((r) => selectedRows.includes(r.IDAppel) && r.IDClient && clientNameById?.[r.IDClient])
+              .map((r) => {
+                const fullName = clientNameById[r.IDClient];
+                const { Nom, Prenom } = splitNomComplet(fullName);
+                return { IDClient: r.IDClient, Nom, Prenom };
+              });
+
+            if (onAffecter) {
+              onAffecter(selectedClients);
+            }
+          }}
+        >
+          Affecter la sélection ({selectedRows.length})
+        </Button>
+      </div>
 
       {/* Modal commentaire */}
       <Modal isOpen={modalOpen} toggle={() => setModalOpen(false)}>
         <ModalHeader toggle={() => setModalOpen(false)}>Commentaire</ModalHeader>
         <ModalBody>{commentContent}</ModalBody>
       </Modal>
+
+      {/* Modal historique client */}
+      {isHistoryOpen && selectedClient && (
+        <CallHistoryByClientModal
+          isOpen={isHistoryOpen}
+          onClose={() => {
+            setIsHistoryOpen(false);
+            setSelectedClient(null);
+          }}
+          clientId={selectedClient.IDClient}
+          titleSuffix={`${selectedClient.Prenom || ""} ${selectedClient.Nom || ""}`.trim()}
+          fallbackPhone={selectedClient.__fallbackPhone || fallbackPhone}
+        />
+      )}
     </>
   );
 };

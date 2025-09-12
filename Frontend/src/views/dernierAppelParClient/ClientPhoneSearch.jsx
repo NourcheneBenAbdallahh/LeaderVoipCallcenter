@@ -157,7 +157,7 @@ const formatSeconds = (secs) => {
                             to={`/admin/clients?focus=${c.IDClient}`}
                             className="text-primary font-weight-bold h4 text-uppercase"
                           >
-                            {[c.Prenom, c.Nom].filter(Boolean).join(" ") || `Client #${c.IDClient}`}
+                            {[c.Prenom, c.Nom].filter(Boolean).join(" ") }
                           </Link>
                         </h5>
 

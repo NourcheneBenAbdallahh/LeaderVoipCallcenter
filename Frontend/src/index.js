@@ -46,7 +46,9 @@ root.render(
     {/* URL visible figée
     /leaderVoipSupport */}
     <URLMask fixed="/" />
-    <DisableCopyPaste />
+          {/*     <DisableCopyPaste />
+ */}
+ <DisableCopyPaste />
     <Routes>
       {/* Sélection de région */}
       <Route path="/select-region" element={<RegionSelect />} />

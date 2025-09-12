@@ -14,9 +14,9 @@ export async function login(req, res) {
     const match = await verifyPassword(mot_de_passe, user.Mot_de_passe);
     if (!match) return res.status(401).json({ message: "Identifiants invalides" });
 
-  if (Number(user.Etat_Compte) !== 1) {
-  return res.status(403).json({ message: "Compte inactif" });
-}
+  //if (Number(user.Etat_Compte) !== 1) {
+  //return res.status(403).json({ message: "Compte inactif" });
+//}
 
 
     const token = generateToken(user);

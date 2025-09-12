@@ -16,11 +16,12 @@ const formatPhoneNumber = (num) => {
   return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}-${digits.slice(8)}`;
 };
 
-const fmtDuree = (s) => {
-  const n = Number(s) || 0;
-  const m = Math.floor(n / 60);
-  const sec = n % 60;
-  return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+const fmtDuree = (secs) => {
+  const n = Number(secs) || 0;
+  const h = Math.floor(n / 3600);
+  const m = Math.floor((n % 3600) / 60);
+  const s = n % 60;
+  return `${h}h ${m}min ${s}s`;
 };
 
 /* ---------- constantes ---------- */
@@ -49,6 +50,10 @@ const writeCache = (k, data) => {
   try { sessionStorage.setItem(k, JSON.stringify({ ts: Date.now(), data })); } catch {}
 };
 
+/* ---------- cache cumul total (indépendant page/limit) ---------- */
+const sumKeyFor = (key, filters) => `histsum:${key}:${JSON.stringify(filters)}`;
+const sumDurations = (rows) => rows.reduce((acc, r) => acc + (Number(r.Duree_Appel) || 0), 0);
+
 export default function CallHistoryByClientModal({
   isOpen,
   onClose,
@@ -65,6 +70,15 @@ export default function CallHistoryByClientModal({
   const [sort, setSort]   = useState("desc");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+
+  // cumul total (toutes pages / selon filtres)
+  const [cumulTotalSeconds, setCumulTotalSeconds] = useState(0);
+
+  // Total cumulé (en secondes) des lignes de la page affichée (info, pas utilisé pour le cumul total)
+  const totalSeconds = useMemo(
+    () => rows.reduce((acc, r) => acc + (Number(r.Duree_Appel) || 0), 0),
+    [rows]
+  );
 
   /* ---------- filtres ---------- */
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -114,9 +128,9 @@ export default function CallHistoryByClientModal({
 
   const payloadClient = useMemo(() => ({
     clientId: parseInt(clientId),
-    page, 
-    limit, 
-    sort, 
+    page,
+    limit,
+    sort,
     sortBy,
     dateFrom: dateFrom || undefined,
     dateTo: dateTo || undefined,
@@ -136,8 +150,6 @@ export default function CallHistoryByClientModal({
   const abortRef = useRef(null);
 
   const loadByClient = async (showSpinnerIfNoCache = true) => {
- // Test  
- // console.log("Chargement historique client:", clientId, "Payload:", payloadClient);
     setErr("");
 
     const cached = readCache(cacheKeyClient);
@@ -155,25 +167,20 @@ export default function CallHistoryByClientModal({
     abortRef.current = controller;
 
     try {
-      const { data } = await api.post(EP_BY_CLIENT, payloadClient, { 
+      const { data } = await api.post(EP_BY_CLIENT, payloadClient, {
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
-      
-      //Test
-      // console.log("Réponse API historyByClient:", data);
-      
+
       const rows = Array.isArray(data?.rows) ? data.rows : [];
       const total = Number(data?.total) || 0;
-      
+
       writeCache(cacheKeyClient, { rows, total });
       setRows(rows);
       setTotal(total);
     } catch (e) {
       console.error("Erreur historyByClient:", e);
-      
+
       // Fallback vers l'endpoint par numéro si l'endpoint par client n'existe pas
       if (e?.response?.status === 404) {
         const fallback = onlyDigits(fallbackPhone);
@@ -210,8 +217,7 @@ export default function CallHistoryByClientModal({
 
     const cached = readCache(cacheKeyPhone);
     if (cached?.rows) {
-      // Filtrer les résultats en cache pour ce client spécifique
-      const filteredRows = cached.rows.filter(row => 
+      const filteredRows = cached.rows.filter(row =>
         row.Client && row.Client.IDClient === parseInt(clientId)
       );
       setRows(filteredRows);
@@ -224,19 +230,15 @@ export default function CallHistoryByClientModal({
 
     try {
       const { data } = await api.post(EP_BY_PHONE, payloadPhone, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' }
       });
-      
+
       const rows = Array.isArray(data?.rows) ? data.rows : [];
-      const total = Number(data?.total) || 0;
-      
-      // Filtrer les résultats pour n'afficher que ceux du client spécifique
-      const filteredRows = rows.filter(row => 
+
+      const filteredRows = rows.filter(row =>
         row.Client && row.Client.IDClient === parseInt(clientId)
       );
-      
+
       writeCache(cacheKeyPhone, { rows: filteredRows, total: filteredRows.length });
       setRows(filteredRows);
       setTotal(filteredRows.length);
@@ -250,19 +252,78 @@ export default function CallHistoryByClientModal({
       } else if (e.name !== "AbortError" && e.name !== "CanceledError") {
         setErr("Erreur lors du chargement de l'historique (numéro).");
       }
-      setRows([]); 
+      setRows([]);
       setTotal(0);
     } finally {
       setLoading(false);
     }
   };
 
-  // ouverture + changement de client
+  // ---- cumul total (toutes pages) côté front ----
+  const computeCumulTotalClient = async () => {
+    try {
+      const key = sumKeyFor(`client:${clientId}`, {
+        dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName, q: qDebounced
+      });
+
+      // 1) lire cache cumul total
+      const cached = readCache(key);
+      if (cached?.cumul != null) {
+        setCumulTotalSeconds(Number(cached.cumul) || 0);
+        return;
+      }
+
+      // 2) boucle toutes pages (limite large) + somme locale
+      let pageIdx = 1;
+      const bulkLimit = 1000; // ajuste si nécessaire
+      let totalRows = 0;
+      let sum = 0;
+
+      const basePayload = {
+        clientId: parseInt(clientId),
+        page: pageIdx,
+        limit: bulkLimit,
+        sort: "desc",
+        sortBy: "Date",
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+        typeAppel: typeAppel || undefined,
+        agentReceptionName: agentReceptionName || undefined,
+        agentEmmissionName: agentEmmissionName || undefined,
+        sousStatuts: (sousStatuts && sousStatuts.length ? sousStatuts.map(s => String(s).trim()) : undefined),
+        clientName: clientName || undefined,
+        q: qDebounced || undefined,
+      };
+
+      const first = await api.post(EP_BY_CLIENT, basePayload, { headers: { 'Content-Type': 'application/json' }});
+      const firstRows = Array.isArray(first?.data?.rows) ? first.data.rows : [];
+      const totalAll = Number(first?.data?.total) || firstRows.length;
+      sum += sumDurations(firstRows);
+      totalRows += firstRows.length;
+
+      const totalPages = Math.max(1, Math.ceil(totalAll / bulkLimit));
+      for (let p = 2; p <= totalPages; p++) {
+        const { data } = await api.post(EP_BY_CLIENT, { ...basePayload, page: p });
+        const pageRows = Array.isArray(data?.rows) ? data.rows : [];
+        sum += sumDurations(pageRows);
+        totalRows += pageRows.length;
+        if (totalRows >= totalAll) break;
+      }
+
+      setCumulTotalSeconds(sum);
+      writeCache(key, { cumul: sum });
+    } catch (e) {
+      console.error("computeCumulTotalClient error:", e);
+      // on laisse la valeur actuelle (0 si échec)
+    }
+  };
+
+  // ouverture + changement de client : charge page & colonnes
   useEffect(() => {
     if (!isOpen) return;
     setPage(1);
     loadByClient(true);
-    return () => { 
+    return () => {
       if (abortRef.current) {
         abortRef.current.abort();
       }
@@ -274,13 +335,20 @@ export default function CallHistoryByClientModal({
     if (!isOpen) return;
     setPage(1);
     loadByClient(true);
-  }, [qDebounced]);
+  }, [qDebounced]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // revalidation quand on change page/limit/sort/filters
+  // revalidation quand on change page/limit/sort/filters (pour la table)
   useEffect(() => {
     if (!isOpen) return;
     loadByClient(true);
-  }, [page, limit, sort, sortBy, dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName]);
+  }, [page, limit, sort, sortBy, dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // calculer le cumul total (toutes pages) à l'ouverture et à chaque changement de filtres
+  useEffect(() => {
+    if (!isOpen) return;
+    computeCumulTotalClient();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, clientId, dateFrom, dateTo, typeAppel, agentReceptionName, agentEmmissionName, sousStatuts, clientName, qDebounced]);
 
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
@@ -323,7 +391,7 @@ export default function CallHistoryByClientModal({
   return (
     <Modal isOpen={isOpen} toggle={onClose} size="xl">
       <ModalHeader toggle={onClose}>
-        Historique des appels — {titleSuffix ? `${titleSuffix} ` : ""}(Client #{clientId})
+        Historique des appels — {titleSuffix ? `${titleSuffix} ` : ""}
         {err && err.includes("fallback") && (
           <small className="text-muted d-block">[Mode fallback par numéro]</small>
         )}
@@ -334,8 +402,15 @@ export default function CallHistoryByClientModal({
         <div className="d-flex justify-content-between align-items-center mb-2">
           <div>
             <small className="text-muted">
-              Total: {total} • Page {page}/{totalPages}
+              Total appels: {total}
+              {" • "}
+              Cumul <strong>total</strong>: <strong>{fmtDuree(cumulTotalSeconds)}</strong>
+              {" • "}
+              Page {page}/{totalPages}
             </small>
+            {err && err.includes("fallback") && (
+              <small className="text-muted d-block">[Mode fallback par numéro]</small>
+            )}
           </div>
 
           <div className="d-flex align-items-center">
